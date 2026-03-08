@@ -1,0 +1,3 @@
+module StrandsAgents {
+    header "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/include/StrandsAgents-Swift.h"
+}

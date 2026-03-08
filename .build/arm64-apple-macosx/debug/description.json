@@ -1,0 +1,1246 @@
+{
+  "builtTestProducts" : [
+    {
+      "binaryPath" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands-agents-swiftPackageTests.xctest/Contents/MacOS/strands-agents-swiftPackageTests",
+      "packagePath" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift",
+      "productName" : "strands-agents-swiftPackageTests"
+    }
+  ],
+  "copyCommands" : {
+
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.StrandsAgents-arm64-apple-macosx15.0-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/sources",
+      "importPath" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Agent/Agent.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Agent/AgentLoop.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Agent/AgentResult.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Agent/AgentStreamEvent.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Agent/RetryStrategy.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/ConversationManager/ConversationManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/ConversationManager/NullConversationManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/ConversationManager/SlidingWindowConversationManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Errors.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Hooks/HookEvents.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Hooks/HookProvider.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Hooks/HookRegistry.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Lifecycle/AgentTaskManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Model/MockProvider.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Model/ModelProvider.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Model/ModelRouter.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Model/StreamAggregator.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Model/StreamEvent.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Observability/ObservabilityEngine.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Observability/PrintObservabilityEngine.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Session/SessionManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Session/SessionStorage.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Tool/AgentTool.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Tool/FunctionTool.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Tool/ToolContext.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Tool/ToolRegistry.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/ContentBlock.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/JSONValue.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/Message.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/StopReason.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/ToolSpec.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/Usage.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "StrandsAgents",
+      "moduleOutputPath" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/Modules/StrandsAgents.swiftmodule",
+      "objects" : [
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/Agent.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/AgentLoop.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/AgentResult.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/AgentStreamEvent.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/RetryStrategy.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ConversationManager.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/NullConversationManager.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/SlidingWindowConversationManager.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/Errors.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/HookEvents.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/HookProvider.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/HookRegistry.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/AgentTaskManager.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/MockProvider.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ModelProvider.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ModelRouter.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/StreamAggregator.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/StreamEvent.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ObservabilityEngine.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/PrintObservabilityEngine.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/SessionManager.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/SessionStorage.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/AgentTool.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/FunctionTool.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ToolContext.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ToolRegistry.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ContentBlock.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/JSONValue.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/Message.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/StopReason.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ToolSpec.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/Usage.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j16",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/include/StrandsAgents-Swift.h",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "sdk_swift"
+      ],
+      "outputFileMapPath" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/Agent.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/AgentLoop.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/AgentResult.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/AgentStreamEvent.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/RetryStrategy.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ConversationManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/NullConversationManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/SlidingWindowConversationManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/Errors.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/HookEvents.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/HookProvider.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/HookRegistry.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/AgentTaskManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/MockProvider.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ModelProvider.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ModelRouter.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/StreamAggregator.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/StreamEvent.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ObservabilityEngine.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/PrintObservabilityEngine.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/SessionManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/SessionStorage.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/AgentTool.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/FunctionTool.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ToolContext.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ToolRegistry.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ContentBlock.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/JSONValue.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/Message.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/StopReason.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ToolSpec.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/Usage.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/Modules/StrandsAgents.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Agent/Agent.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Agent/AgentLoop.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Agent/AgentResult.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Agent/AgentStreamEvent.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Agent/RetryStrategy.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/ConversationManager/ConversationManager.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/ConversationManager/NullConversationManager.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/ConversationManager/SlidingWindowConversationManager.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Errors.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Hooks/HookEvents.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Hooks/HookProvider.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Hooks/HookRegistry.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Lifecycle/AgentTaskManager.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Model/MockProvider.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Model/ModelProvider.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Model/ModelRouter.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Model/StreamAggregator.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Model/StreamEvent.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Observability/ObservabilityEngine.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Observability/PrintObservabilityEngine.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Session/SessionManager.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Session/SessionStorage.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Tool/AgentTool.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Tool/FunctionTool.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Tool/ToolContext.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Tool/ToolRegistry.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/ContentBlock.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/JSONValue.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/Message.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/StopReason.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/ToolSpec.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/Usage.swift"
+      ],
+      "tempsPath" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.StrandsAgentsTests-arm64-apple-macosx15.0-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgentsTests.build/sources",
+      "importPath" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Tests/StrandsAgentsTests/AgentTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Tests/StrandsAgentsTests/StrandsAgentsTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/Modules/StrandsAgents.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgentsTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "StrandsAgentsTests",
+      "moduleOutputPath" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/Modules/StrandsAgentsTests.swiftmodule",
+      "objects" : [
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgentsTests.build/AgentTests.swift.o",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgentsTests.build/StrandsAgentsTests.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j16",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "sdk_swift"
+      ],
+      "outputFileMapPath" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgentsTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgentsTests.build/AgentTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgentsTests.build/StrandsAgentsTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/Modules/StrandsAgentsTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Tests/StrandsAgentsTests/AgentTests.swift",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Tests/StrandsAgentsTests/StrandsAgentsTests.swift"
+      ],
+      "tempsPath" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgentsTests.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.strands-agents-swiftPackageTests-arm64-apple-macosx15.0-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands_agents_swiftPackageTests.build/sources",
+      "importPath" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands-agents-swiftPackageTests.derived/runner.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/Modules/StrandsAgentsTests.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands_agents_swiftPackageTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "strands_agents_swiftPackageTests",
+      "moduleOutputPath" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/Modules/strands_agents_swiftPackageTests.swiftmodule",
+      "objects" : [
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands_agents_swiftPackageTests.build/runner.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j16",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands_agents_swiftPackageTests.build/include/strands-agents-swiftPackageTests-Swift.h",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "sdk_swift"
+      ],
+      "outputFileMapPath" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands_agents_swiftPackageTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands_agents_swiftPackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/Modules/strands_agents_swiftPackageTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands-agents-swiftPackageTests.derived/runner.swift"
+      ],
+      "tempsPath" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands_agents_swiftPackageTests.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "StrandsAgents" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "StrandsAgents",
+      "-package-name",
+      "sdk_swift",
+      "-c",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Agent/Agent.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Agent/AgentLoop.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Agent/AgentResult.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Agent/AgentStreamEvent.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Agent/RetryStrategy.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/ConversationManager/ConversationManager.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/ConversationManager/NullConversationManager.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/ConversationManager/SlidingWindowConversationManager.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Errors.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Hooks/HookEvents.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Hooks/HookProvider.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Hooks/HookRegistry.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Lifecycle/AgentTaskManager.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Model/MockProvider.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Model/ModelProvider.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Model/ModelRouter.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Model/StreamAggregator.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Model/StreamEvent.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Observability/ObservabilityEngine.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Observability/PrintObservabilityEngine.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Session/SessionManager.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Session/SessionStorage.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Tool/AgentTool.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Tool/FunctionTool.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Tool/ToolContext.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Tool/ToolRegistry.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/ContentBlock.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/JSONValue.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/Message.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/StopReason.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/ToolSpec.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/Usage.swift",
+      "-I",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j16",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/include/StrandsAgents-Swift.h",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "sdk_swift",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "StrandsAgentsTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "StrandsAgentsTests",
+      "-package-name",
+      "sdk_swift",
+      "-c",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Tests/StrandsAgentsTests/AgentTests.swift",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Tests/StrandsAgentsTests/StrandsAgentsTests.swift",
+      "-I",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j16",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "sdk_swift",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "strands_agents_swiftPackageTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "strands_agents_swiftPackageTests",
+      "-package-name",
+      "sdk_swift",
+      "-c",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands-agents-swiftPackageTests.derived/runner.swift",
+      "-I",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j16",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands_agents_swiftPackageTests.build/include/strands-agents-swiftPackageTests-Swift.h",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "sdk_swift",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "StrandsAgents" : [
+
+    ],
+    "StrandsAgentsTests" : [
+      "StrandsAgents"
+    ],
+    "strands_agents_swiftPackageTests" : [
+      "StrandsAgentsTests",
+      "StrandsAgents"
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+    "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands-agents-swiftPackageTests.derived/runner.swift" : {
+      "inputs" : [
+
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands-agents-swiftPackageTests.derived/runner.swift"
+        }
+      ]
+    }
+  },
+  "traitConfiguration" : {
+    "default" : {
+
+    }
+  },
+  "writeCommands" : {
+    "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Agent/Agent.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Agent/AgentLoop.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Agent/AgentResult.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Agent/AgentStreamEvent.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Agent/RetryStrategy.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/ConversationManager/ConversationManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/ConversationManager/NullConversationManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/ConversationManager/SlidingWindowConversationManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Errors.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Hooks/HookEvents.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Hooks/HookProvider.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Hooks/HookRegistry.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Lifecycle/AgentTaskManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Model/MockProvider.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Model/ModelProvider.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Model/ModelRouter.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Model/StreamAggregator.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Model/StreamEvent.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Observability/ObservabilityEngine.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Observability/PrintObservabilityEngine.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Session/SessionManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Session/SessionStorage.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Tool/AgentTool.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Tool/FunctionTool.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Tool/ToolContext.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Tool/ToolRegistry.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/ContentBlock.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/JSONValue.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/Message.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/StopReason.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/ToolSpec.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Sources/StrandsAgents/Types/Usage.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/sources"
+    },
+    "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgentsTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Tests/StrandsAgentsTests/AgentTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/Tests/StrandsAgentsTests/StrandsAgentsTests.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgentsTests.build/sources"
+    },
+    "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands-agents-swiftPackageTests.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/Agent.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/AgentLoop.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/AgentResult.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/AgentStreamEvent.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/AgentTaskManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/AgentTool.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ContentBlock.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ConversationManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/Errors.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/FunctionTool.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/HookEvents.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/HookProvider.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/HookRegistry.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/JSONValue.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/Message.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/MockProvider.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ModelProvider.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ModelRouter.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/NullConversationManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ObservabilityEngine.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/PrintObservabilityEngine.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/RetryStrategy.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/SessionManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/SessionStorage.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/SlidingWindowConversationManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/StopReason.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/StreamAggregator.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/StreamEvent.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ToolContext.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ToolRegistry.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/ToolSpec.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgents.build/Usage.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgentsTests.build/AgentTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/StrandsAgentsTests.build/StrandsAgentsTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands_agents_swiftPackageTests.build/runner.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands-agents-swiftPackageTests.product/Objects.LinkFileList"
+    },
+    "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands_agents_swiftPackageTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands-agents-swiftPackageTests.derived/runner.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands_agents_swiftPackageTests.build/sources"
+    },
+    "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands_agents_swiftPackageTests.build/master.swiftdeps"
+  },
+  "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands-agents-swiftPackageTests.derived/runner.swift": {
+    "dependencies": "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands_agents_swiftPackageTests.build/runner.d",
+    "object": "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands_agents_swiftPackageTests.build/runner.swift.o",
+    "swiftmodule": "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands_agents_swiftPackageTests.build/runner~partial.swiftmodule",
+    "swift-dependencies": "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands_agents_swiftPackageTests.build/runner.swiftdeps",
+    "diagnostics": "/Users/kunal.batra/Documents/code/datadog/strands/sdk-swift/.build/arm64-apple-macosx/debug/strands_agents_swiftPackageTests.build/runner.dia"
+  }
+}
