@@ -50,8 +50,11 @@ struct AgentLoop: Sendable {
         let invocationStart = Date()
 
         let invocationSpan = observability.startSpan(
-            name: "strands.agent.invocation",
-            attributes: ["message_count": "\(messages.count)"]
+            name: GenAISpanNames.invokeAgent,
+            attributes: [
+                GenAIAttributes.operationName: "invoke_agent",
+                GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
+            ]
         )
         defer { observability.endSpan(invocationSpan, status: .ok) }
 
@@ -194,8 +197,11 @@ struct AgentLoop: Sendable {
         let invocationStart = Date()
 
         let invocationSpan = observability.startSpan(
-            name: "strands.agent.invocation",
-            attributes: ["message_count": "\(messages.count)"]
+            name: GenAISpanNames.invokeAgent,
+            attributes: [
+                GenAIAttributes.operationName: "invoke_agent",
+                GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
+            ]
         )
         defer { observability.endSpan(invocationSpan, status: .ok) }
 
@@ -315,7 +321,11 @@ struct AgentLoop: Sendable {
         messages: [Message], systemPrompt: String?, toolChoice: ToolChoice?, cycleCount: Int
     ) async throws -> (StreamAggregator.AggregatedResult, SpanContext, Int, Int?, String?) {
         let cycleSpan = observability.startSpan(
-            name: "strands.agent.loop.cycle", attributes: ["cycle": "\(cycleCount)"]
+            name: GenAISpanNames.eventLoopCycle,
+            attributes: [
+                GenAIAttributes.eventLoopCycleId: "\(cycleCount)",
+                GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
+            ]
         )
 
         let toolSpecs = toolRegistry.count > 0 ? toolRegistry.toolSpecs : nil
@@ -325,8 +335,12 @@ struct AgentLoop: Sendable {
         try await hookRegistry.invoke(BeforeModelCallEvent(messages: normalizedMessages, toolSpecs: toolSpecs))
 
         let modelSpan = observability.startSpan(
-            name: "strands.model.invoke",
-            attributes: ["model_id": provider.modelId ?? "unknown", "cycle": "\(cycleCount)"]
+            name: GenAISpanNames.chat,
+            attributes: [
+                GenAIAttributes.operationName: "chat",
+                GenAIAttributes.requestModel: provider.modelId ?? "unknown",
+                GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
+            ]
         )
 
         let modelStart = Date()
@@ -343,6 +357,17 @@ struct AgentLoop: Sendable {
                     stream: stream,
                     onTextDelta: { _ in ttftTracker.mark() }
                 )
+            }
+            // Record gen_ai usage attributes on the model span
+            if let u = aggregated.usage {
+                observability.recordEvent(name: GenAIEventNames.choice, attributes: [
+                    GenAIAttributes.usageInputTokens: "\(u.inputTokens)",
+                    GenAIAttributes.usageOutputTokens: "\(u.outputTokens)",
+                    GenAIAttributes.usageTotalTokens: "\(u.totalTokens)",
+                    GenAIAttributes.usagePromptTokens: "\(u.inputTokens)",
+                    GenAIAttributes.usageCompletionTokens: "\(u.outputTokens)",
+                    "finish_reason": aggregated.stopReason.rawValue,
+                ], spanContext: modelSpan)
             }
             observability.endSpan(modelSpan, status: .ok)
         } catch {
@@ -366,7 +391,11 @@ struct AgentLoop: Sendable {
         yield: @escaping @Sendable (AgentStreamEvent) async -> Void
     ) async throws -> (StreamAggregator.AggregatedResult, SpanContext, Int, Int?, String?) {
         let cycleSpan = observability.startSpan(
-            name: "strands.agent.loop.cycle", attributes: ["cycle": "\(cycleCount)"]
+            name: GenAISpanNames.eventLoopCycle,
+            attributes: [
+                GenAIAttributes.eventLoopCycleId: "\(cycleCount)",
+                GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
+            ]
         )
 
         let toolSpecs = toolRegistry.count > 0 ? toolRegistry.toolSpecs : nil
@@ -376,8 +405,12 @@ struct AgentLoop: Sendable {
         try await hookRegistry.invoke(BeforeModelCallEvent(messages: normalizedMessages, toolSpecs: toolSpecs))
 
         let modelSpan = observability.startSpan(
-            name: "strands.model.invoke",
-            attributes: ["model_id": provider.modelId ?? "unknown", "cycle": "\(cycleCount)"]
+            name: GenAISpanNames.chat,
+            attributes: [
+                GenAIAttributes.operationName: "chat",
+                GenAIAttributes.requestModel: provider.modelId ?? "unknown",
+                GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
+            ]
         )
 
         let modelStart = Date()
@@ -398,6 +431,17 @@ struct AgentLoop: Sendable {
                         await yield(.textDelta(text))
                     }
                 )
+            }
+            // Record gen_ai usage attributes on the model span
+            if let u = aggregated.usage {
+                observability.recordEvent(name: GenAIEventNames.choice, attributes: [
+                    GenAIAttributes.usageInputTokens: "\(u.inputTokens)",
+                    GenAIAttributes.usageOutputTokens: "\(u.outputTokens)",
+                    GenAIAttributes.usageTotalTokens: "\(u.totalTokens)",
+                    GenAIAttributes.usagePromptTokens: "\(u.inputTokens)",
+                    GenAIAttributes.usageCompletionTokens: "\(u.outputTokens)",
+                    "finish_reason": aggregated.stopReason.rawValue,
+                ], spanContext: modelSpan)
             }
             observability.endSpan(modelSpan, status: .ok)
         } catch {
@@ -466,17 +510,42 @@ struct AgentLoop: Sendable {
     }
 
     private func executeSingleTool(toolUse: ToolUseBlock, messages: [Message], systemPrompt: String?) async throws -> ToolResultBlock {
-        let toolSpan = observability.startSpan(name: "strands.tool.invoke", attributes: ["tool_name": toolUse.name])
+        let toolSpan = observability.startSpan(
+            name: "\(GenAISpanNames.executeTool) \(toolUse.name)",
+            attributes: [
+                GenAIAttributes.operationName: "execute_tool",
+                GenAIAttributes.toolName: toolUse.name,
+                GenAIAttributes.toolCallId: toolUse.toolUseId,
+                GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
+            ]
+        )
         try await hookRegistry.invoke(BeforeToolCallEvent(toolUse: toolUse))
+
+        // Record tool input as gen_ai event
+        observability.recordEvent(
+            name: GenAIEventNames.toolMessage,
+            attributes: ["role": "tool", "id": toolUse.toolUseId],
+            spanContext: toolSpan
+        )
 
         let result: ToolResultBlock
         if let tool = toolRegistry.tool(named: toolUse.name) {
             let context = ToolContext(toolUse: toolUse, messages: messages, systemPrompt: systemPrompt, agentState: agentState)
             do {
                 result = try await tool.call(toolUse: toolUse, context: context)
+                observability.recordEvent(
+                    name: GenAIEventNames.choice,
+                    attributes: [GenAIAttributes.toolStatus: "success", "id": toolUse.toolUseId],
+                    spanContext: toolSpan
+                )
                 observability.endSpan(toolSpan, status: .ok)
             } catch {
                 result = ToolResultBlock(toolUseId: toolUse.toolUseId, status: .error, content: [.text("Error: \(error.localizedDescription)")])
+                observability.recordEvent(
+                    name: GenAIEventNames.choice,
+                    attributes: [GenAIAttributes.toolStatus: "error", "id": toolUse.toolUseId],
+                    spanContext: toolSpan
+                )
                 observability.endSpan(toolSpan, status: .error(error.localizedDescription))
             }
         } else {
@@ -504,20 +573,20 @@ struct AgentLoop: Sendable {
     }
 
     private func emitCycleMetrics(_ metrics: CycleMetrics) {
-        observability.recordMetric(name: "strands.cycle.model_latency_ms", value: Double(metrics.modelLatencyMs), unit: "ms", attributes: ["cycle": "\(metrics.cycleNumber)"])
+        let cycleAttrs = [GenAIAttributes.eventLoopCycleId: "\(metrics.cycleNumber)"]
+        observability.recordMetric(name: GenAIAttributes.serverRequestDuration, value: Double(metrics.modelLatencyMs), unit: "ms", attributes: cycleAttrs)
         if let ttft = metrics.timeToFirstTokenMs {
-            observability.recordMetric(name: "strands.cycle.ttft_ms", value: Double(ttft), unit: "ms", attributes: ["cycle": "\(metrics.cycleNumber)"])
+            observability.recordMetric(name: GenAIAttributes.serverTimeToFirstToken, value: Double(ttft), unit: "ms", attributes: cycleAttrs)
         }
-        observability.recordMetric(name: "strands.cycle.input_tokens", value: Double(metrics.usage.inputTokens), unit: "tokens", attributes: ["cycle": "\(metrics.cycleNumber)"])
-        observability.recordMetric(name: "strands.cycle.output_tokens", value: Double(metrics.usage.outputTokens), unit: "tokens", attributes: ["cycle": "\(metrics.cycleNumber)"])
+        observability.recordMetric(name: GenAIAttributes.usageInputTokens, value: Double(metrics.usage.inputTokens), unit: "tokens", attributes: cycleAttrs)
+        observability.recordMetric(name: GenAIAttributes.usageOutputTokens, value: Double(metrics.usage.outputTokens), unit: "tokens", attributes: cycleAttrs)
     }
 
     private func emitLoopMetrics(_ metrics: EventLoopMetrics) {
-        observability.recordMetric(name: "strands.invocation.total_latency_ms", value: Double(metrics.totalLatencyMs), unit: "ms", attributes: [:])
-        observability.recordMetric(name: "strands.invocation.total_input_tokens", value: Double(metrics.totalUsage.inputTokens), unit: "tokens", attributes: [:])
-        observability.recordMetric(name: "strands.invocation.total_output_tokens", value: Double(metrics.totalUsage.outputTokens), unit: "tokens", attributes: [:])
-        observability.recordMetric(name: "strands.invocation.cycle_count", value: Double(metrics.cycleCount), unit: "count", attributes: [:])
-        observability.recordMetric(name: "strands.invocation.output_tokens_per_second", value: metrics.outputTokensPerSecond, unit: "tokens/s", attributes: [:])
+        observability.recordMetric(name: GenAIAttributes.serverRequestDuration, value: Double(metrics.totalLatencyMs), unit: "ms", attributes: [GenAIAttributes.operationName: "invoke_agent"])
+        observability.recordMetric(name: GenAIAttributes.usageInputTokens, value: Double(metrics.totalUsage.inputTokens), unit: "tokens", attributes: [GenAIAttributes.operationName: "invoke_agent"])
+        observability.recordMetric(name: GenAIAttributes.usageOutputTokens, value: Double(metrics.totalUsage.outputTokens), unit: "tokens", attributes: [GenAIAttributes.operationName: "invoke_agent"])
+        observability.recordMetric(name: GenAIAttributes.usageTotalTokens, value: Double(metrics.totalUsage.totalTokens), unit: "tokens", attributes: [GenAIAttributes.operationName: "invoke_agent"])
     }
 }
 
