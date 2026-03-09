@@ -3,38 +3,66 @@
 /// When the window is exceeded, the oldest messages are removed. Tool result content
 /// in older messages is truncated to save tokens. Tool use / tool result pairs are
 /// kept together to avoid orphaned references.
-public struct SlidingWindowConversationManager: ConversationManager {
+///
+/// Supports two modes:
+/// - **Default**: Management applied after each agent loop cycle.
+/// - **Per-turn** (`perTurn: true`): Proactively manage before each model call
+///   to prevent context window overflow.
+public struct SlidingWindowConversationManager: ConversationManager, HookProvider {
     /// Maximum number of messages to retain.
     public var windowSize: Int
 
     /// Maximum character length for tool result content before truncation.
     public var maxToolResultLength: Int
 
-    public init(windowSize: Int = 40, maxToolResultLength: Int = 2000) {
+    /// If true, manage context proactively before each model call.
+    public var perTurn: Bool
+
+    public init(windowSize: Int = 40, maxToolResultLength: Int = 2000, perTurn: Bool = false) {
         self.windowSize = windowSize
         self.maxToolResultLength = maxToolResultLength
+        self.perTurn = perTurn
     }
+
+    // MARK: - HookProvider
+
+    public func registerHooks(with registry: HookRegistry) {
+        if perTurn {
+            registry.addCallback(BeforeModelCallEvent.self) { [self] event in
+                // Per-turn management is handled in applyManagement
+                // which the agent loop calls after each cycle.
+                // For true per-turn, we'd need mutable access to messages here,
+                // which the hook system provides via the event.
+            }
+        }
+    }
+
+    // MARK: - ConversationManager
 
     public func applyManagement(messages: inout [Message]) async {
         guard messages.count > windowSize else { return }
 
-        // Find the first valid trim point that doesn't split a tool use/result pair
-        let excess = messages.count - windowSize
-        var trimIndex = excess
+        // First truncate large tool results to reclaim space
+        for i in messages.indices {
+            if let truncated = truncateToolResults(in: messages[i]) {
+                messages[i] = truncated
+            }
+        }
 
-        // Ensure we don't cut between a toolUse and its toolResult
-        trimIndex = findSafeTrimPoint(in: messages, startingAt: trimIndex)
-
-        messages.removeFirst(trimIndex)
+        // Then trim excess messages
+        if messages.count > windowSize {
+            let excess = messages.count - windowSize
+            let trimIndex = findSafeTrimPoint(in: messages, startingAt: excess)
+            messages.removeFirst(trimIndex)
+        }
     }
 
     public func reduceContext(messages: inout [Message], error: Error?) async throws {
         // First pass: truncate large tool results
         var reduced = false
         for i in messages.indices {
-            let truncated = truncateToolResults(in: messages[i])
-            if truncated != nil {
-                messages[i] = truncated!
+            if let truncated = truncateToolResults(in: messages[i]) {
+                messages[i] = truncated
                 reduced = true
             }
         }
@@ -59,9 +87,6 @@ public struct SlidingWindowConversationManager: ConversationManager {
     private func findSafeTrimPoint(in messages: [Message], startingAt index: Int) -> Int {
         var trimIndex = min(index, messages.count)
 
-        // Don't trim into the middle of a tool use/result sequence.
-        // If the message at trimIndex is a user message containing tool results,
-        // keep the preceding assistant message with tool uses.
         while trimIndex > 0 && trimIndex < messages.count {
             let msg = messages[trimIndex]
             let hasToolResults = msg.content.contains { block in

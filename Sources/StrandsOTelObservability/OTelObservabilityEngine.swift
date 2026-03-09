@@ -1,0 +1,112 @@
+import Foundation
+import StrandsAgents
+import OpenTelemetryApi
+import OpenTelemetrySdk
+
+/// OpenTelemetry-based observability engine for Strands agents.
+///
+/// Integrates with any OTel-compatible backend (Datadog, Jaeger, AWS OTEL, etc.)
+/// via configured exporters.
+///
+/// ```swift
+/// import OpenTelemetrySdk
+/// import StrandsOTelObservability
+///
+/// // Configure your tracer provider with exporters first, then:
+/// let tracer = OpenTelemetry.instance.tracerProvider
+///     .get(instrumentationName: "my-service", instrumentationVersion: "1.0.0")
+/// let otel = OTelObservabilityEngine(tracer: tracer)
+/// let agent = Agent(model: provider, observability: otel)
+/// ```
+public final class OTelObservabilityEngine: StrandsAgents.ObservabilityEngine, @unchecked Sendable {
+    private let tracer: OpenTelemetryApi.Tracer
+    private let redactor: (any StrandsAgents.ContentRedactor)?
+    private let lock = NSLock()
+    private var activeSpans: [String: OpenTelemetryApi.Span] = [:]
+
+    /// Create an OTel engine with an existing tracer.
+    public init(
+        tracer: OpenTelemetryApi.Tracer,
+        redactor: (any StrandsAgents.ContentRedactor)? = nil
+    ) {
+        self.tracer = tracer
+        self.redactor = redactor
+    }
+
+    // MARK: - ObservabilityEngine
+
+    public func startSpan(
+        name: String,
+        attributes: [String: String]
+    ) -> StrandsAgents.SpanContext {
+        let spanBuilder = tracer.spanBuilder(spanName: name)
+
+        for (key, value) in attributes {
+            let redacted = redactor?.redact(value) ?? value
+            spanBuilder.setAttribute(key: key, value: redacted)
+        }
+
+        let span = spanBuilder.startSpan()
+        let ctx = StrandsAgents.SpanContext(
+            id: span.context.spanId.hexString,
+            traceId: span.context.traceId.hexString
+        )
+
+        lock.withLock {
+            activeSpans[ctx.id] = span
+        }
+
+        return ctx
+    }
+
+    public func endSpan(
+        _ context: StrandsAgents.SpanContext,
+        status: StrandsAgents.SpanStatus
+    ) {
+        let span: OpenTelemetryApi.Span? = lock.withLock {
+            activeSpans.removeValue(forKey: context.id)
+        }
+
+        guard let span else { return }
+
+        switch status {
+        case .ok:
+            span.status = .ok
+        case .error(let message):
+            span.status = .error(description: message)
+        }
+
+        span.end()
+    }
+
+    public func recordEvent(
+        name: String,
+        attributes: [String: String],
+        spanContext: StrandsAgents.SpanContext?
+    ) {
+        let span: OpenTelemetryApi.Span?
+        if let ctx = spanContext {
+            span = lock.withLock { activeSpans[ctx.id] }
+        } else {
+            span = nil
+        }
+
+        var eventAttributes: [String: OpenTelemetryApi.AttributeValue] = [:]
+        for (key, value) in attributes {
+            let redacted = redactor?.redact(value) ?? value
+            eventAttributes[key] = .string(redacted)
+        }
+
+        span?.addEvent(name: name, attributes: eventAttributes)
+    }
+
+    public func recordMetric(
+        name: String,
+        value: Double,
+        unit: String?,
+        attributes: [String: String]
+    ) {
+        // Simplified: metrics recorded as span events.
+        // For full metrics, configure OTel MeterProvider separately.
+    }
+}

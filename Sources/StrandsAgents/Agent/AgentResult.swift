@@ -12,16 +12,21 @@ public struct AgentResult: Sendable {
     /// Number of loop cycles executed.
     public var cycleCount: Int
 
+    /// Detailed per-cycle metrics for the invocation.
+    public var metrics: EventLoopMetrics
+
     public init(
         stopReason: StopReason,
         message: Message,
         usage: Usage = Usage(),
-        cycleCount: Int = 0
+        cycleCount: Int = 0,
+        metrics: EventLoopMetrics = EventLoopMetrics()
     ) {
         self.stopReason = stopReason
         self.message = message
         self.usage = usage
         self.cycleCount = cycleCount
+        self.metrics = metrics
     }
 }
 

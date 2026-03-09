@@ -13,7 +13,7 @@
 /// metadata?
 /// ```
 public protocol ModelProvider: Sendable {
-    /// A human-readable identifier for this model (e.g. "anthropic.claude-sonnet-4-20250514").
+    /// A human-readable identifier for this model (e.g. "us.anthropic.claude-sonnet-4-20250514-v1:0").
     var modelId: String? { get }
 
     /// Stream a conversation with the model.
@@ -30,6 +30,20 @@ public protocol ModelProvider: Sendable {
         systemPrompt: String?,
         toolChoice: ToolChoice?
     ) -> AsyncThrowingStream<ModelStreamEvent, Error>
+}
+
+/// A model provider that supports runtime configuration updates.
+///
+/// Providers that conform to this protocol allow callers to inspect and modify
+/// their configuration at runtime (e.g. changing temperature, max tokens).
+public protocol ConfigurableModelProvider: ModelProvider {
+    associatedtype Config: Sendable
+
+    /// Get the current configuration.
+    func getConfig() -> Config
+
+    /// Update the configuration.
+    func updateConfig(_ config: Config)
 }
 
 // MARK: - Default Parameters

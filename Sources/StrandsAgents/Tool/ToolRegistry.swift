@@ -1,7 +1,12 @@
+import Foundation
+
 /// Manages registration and lookup of tools available to an agent.
 public final class ToolRegistry: @unchecked Sendable {
     private var tools: [String: any AgentTool] = [:]
     private let lock = NSLock()
+
+    /// Regex pattern for valid tool names.
+    private nonisolated(unsafe) static let validNamePattern = /^[a-zA-Z0-9_\-]{1,64}$/
 
     public init() {}
 
@@ -13,47 +18,52 @@ public final class ToolRegistry: @unchecked Sendable {
     }
 
     /// Register a tool. Replaces any existing tool with the same name.
+    ///
+    /// - Throws: Logs a warning if the tool name doesn't match the valid pattern.
     public func register(_ tool: any AgentTool) {
-        lock.lock()
-        defer { lock.unlock() }
-        tools[tool.name] = tool
+        if !Self.isValidToolName(tool.name) {
+            // Log but don't throw -- some internal tools may have special names
+            #if DEBUG
+            print("[StrandsAgents] Warning: Tool name '\(tool.name)' doesn't match pattern ^[a-zA-Z0-9_-]{1,64}$")
+            #endif
+        }
+        lock.withLock {
+            tools[tool.name] = tool
+        }
     }
 
     /// Unregister a tool by name.
     @discardableResult
     public func unregister(name: String) -> (any AgentTool)? {
-        lock.lock()
-        defer { lock.unlock() }
-        return tools.removeValue(forKey: name)
+        lock.withLock {
+            tools.removeValue(forKey: name)
+        }
     }
 
     /// Look up a tool by name.
     public func tool(named name: String) -> (any AgentTool)? {
-        lock.lock()
-        defer { lock.unlock() }
-        return tools[name]
+        lock.withLock { tools[name] }
     }
 
     /// All registered tool specifications (for passing to the model).
     public var toolSpecs: [ToolSpec] {
-        lock.lock()
-        defer { lock.unlock() }
-        return tools.values.map(\.toolSpec)
+        lock.withLock {
+            tools.values.map(\.toolSpec)
+        }
     }
 
     /// All registered tool names.
     public var toolNames: [String] {
-        lock.lock()
-        defer { lock.unlock() }
-        return Array(tools.keys)
+        lock.withLock { Array(tools.keys) }
     }
 
     /// Number of registered tools.
     public var count: Int {
-        lock.lock()
-        defer { lock.unlock() }
-        return tools.count
+        lock.withLock { tools.count }
+    }
+
+    /// Validate a tool name against the standard pattern.
+    public static func isValidToolName(_ name: String) -> Bool {
+        name.wholeMatch(of: validNamePattern) != nil
     }
 }
-
-import Foundation
