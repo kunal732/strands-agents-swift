@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Streaming — Strands Agents Swift</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/swift.min.js"></script>
+</head>
+<body>
+<header></header>
+<div class="layout">
+  <aside id="sidebar"></aside>
+  <main>
+    <article>
+      <div class="breadcrumb"><a href="index.html">Home</a><span class="breadcrumb-sep">›</span>Concepts<span class="breadcrumb-sep">›</span>Streaming</div>
+      <h1>Streaming</h1>
+      <p class="page-description">Display tokens as the model generates them for a responsive UI, rather than waiting for the complete response.</p>
+
+      <h2 id="agent-stream">agent.stream()</h2>
+      <p><code>agent.stream()</code> returns an <code>AsyncStream&lt;StreamEvent&gt;</code>. Iterate it with <code>for try await</code> to receive events as they happen:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">for try await event in agent.stream("Explain how TCP/IP works") {
+    switch event {
+    case .textDelta(let token):
+        print(token, terminator: "")   // each token as it arrives
+    case .result(let final):
+        print("\n\nDone.")
+    default:
+        break
+    }
+}</code></pre>
+      </div>
+
+      <h2 id="stream-events">Stream Events</h2>
+      <p>The <code>StreamEvent</code> enum covers every stage of the agent loop:</p>
+      <table>
+        <thead><tr><th>Case</th><th>When it fires</th><th>Associated value</th></tr></thead>
+        <tbody>
+          <tr><td><code>.textDelta(String)</code></td><td>Each token of model text output</td><td>The token string</td></tr>
+          <tr><td><code>.toolUse(ToolUseBlock)</code></td><td>Model decides to call a tool</td><td>Tool name + input</td></tr>
+          <tr><td><code>.toolResult(ToolResultBlock)</code></td><td>Tool execution completes</td><td>Status + output content</td></tr>
+          <tr><td><code>.cycleComplete(CycleMetrics)</code></td><td>One reasoning cycle finishes</td><td>Latency, token counts</td></tr>
+          <tr><td><code>.result(AgentResult)</code></td><td>Final response ready</td><td>Full result + metrics</td></tr>
+          <tr><td><code>.error(Error)</code></td><td>Unrecoverable error</td><td>The error</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="swiftui-example">SwiftUI Example</h2>
+      <p>Stream tokens into a <code>@State</code> variable for a typewriter effect:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">ContentView.swift</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">import SwiftUI
+import StrandsAgents
+
+struct ContentView: View {
+    @State private var response = ""
+    @State private var isStreaming = false
+    let agent = Agent(model: provider)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            ScrollView {
+                Text(response)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+            }
+            Button(isStreaming ? "Streaming…" : "Ask Agent") {
+                Task { await ask() }
+            }
+            .disabled(isStreaming)
+        }
+    }
+
+    func ask() async {
+        isStreaming = true
+        response = ""
+        do {
+            for try await event in agent.stream("Write a short poem about Swift") {
+                if case .textDelta(let token) = event {
+                    response += token
+                }
+            }
+        } catch {
+            response = "Error: \(error.localizedDescription)"
+        }
+        isStreaming = false
+    }
+}</code></pre>
+      </div>
+
+      <h2 id="tool-visibility">Showing Tool Activity</h2>
+      <p>Use <code>.toolUse</code> and <code>.toolResult</code> events to give users visibility into what the agent is doing:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">@State private var statusLine = ""
+
+for try await event in agent.stream(prompt) {
+    switch event {
+    case .textDelta(let token):
+        response += token
+    case .toolUse(let use):
+        statusLine = "Calling \(use.name)…"
+    case .toolResult(let res):
+        statusLine = res.status == .success ? "Tool completed" : "Tool failed"
+    case .result:
+        statusLine = ""
+    default:
+        break
+    }
+}</code></pre>
+      </div>
+
+      <h2 id="metrics-from-stream">Collecting Metrics</h2>
+      <p>The final <code>.result</code> event carries the same <code>AgentResult</code> as a non-streaming <code>run()</code> call, including full metrics:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">for try await event in agent.stream(prompt) {
+    if case .result(let final) = event {
+        print("Cycles: \(final.metrics.cycleCount)")
+        print("Latency: \(final.metrics.totalLatencyMs)ms")
+        print("Tokens/sec: \(final.metrics.outputTokensPerSecond)")
+        print("Total tokens: \(final.usage.totalTokens)")
+    }
+}</code></pre>
+      </div>
+
+      <div class="page-nav">
+        <a class="prev" href="structured-output.html"><span class="nav-dir">← Previous</span><span class="nav-title">Structured Output</span></a>
+        <a class="next" href="local-inference.html"><span class="nav-dir">Next →</span><span class="nav-title">Local Inference</span></a>
+      </div>
+    </article>
+  </main>
+  <aside id="toc"></aside>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

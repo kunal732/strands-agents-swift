@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modules — Strands Agents Swift</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/swift.min.js"></script>
+</head>
+<body>
+<header></header>
+<div class="layout">
+  <aside id="sidebar"></aside>
+  <main>
+    <article>
+      <div class="breadcrumb"><a href="index.html">Home</a><span class="breadcrumb-sep">›</span>Reference<span class="breadcrumb-sep">›</span>Modules</div>
+      <h1>Modules</h1>
+      <p class="page-description">The SDK is split into focused modules. Add only what you need — each module has its own dependency footprint.</p>
+
+      <h2 id="core">Core</h2>
+      <table>
+        <thead><tr><th>Module</th><th>What it provides</th><th>Dependencies</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>StrandsAgents</code></td>
+            <td>Agent, tools, hooks, multi-agent (Graph, Swarm, A2A), session, MCP, <code>@Tool</code> macro, <code>@StructuredOutput</code> macro</td>
+            <td>Foundation only</td>
+          </tr>
+          <tr>
+            <td><code>StrandsAgentsMacros</code></td>
+            <td>Compiler plugin backing <code>@Tool</code> and <code>@StructuredOutput</code></td>
+            <td>SwiftSyntax</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 id="providers">Model Providers</h2>
+      <table>
+        <thead><tr><th>Module</th><th>What it provides</th><th>Dependencies</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>StrandsBedrockProvider</code></td>
+            <td>AWS Bedrock ConverseStream — Claude, Titan, Llama, Mistral, and more</td>
+            <td>aws-sdk-swift</td>
+          </tr>
+          <tr>
+            <td><code>StrandsAnthropicProvider</code></td>
+            <td>Anthropic Messages API direct integration</td>
+            <td>None</td>
+          </tr>
+          <tr>
+            <td><code>StrandsOpenAIProvider</code></td>
+            <td>OpenAI Chat Completions — also works with Groq, Together AI, and any compatible endpoint</td>
+            <td>None</td>
+          </tr>
+          <tr>
+            <td><code>StrandsGeminiProvider</code></td>
+            <td>Google Gemini API</td>
+            <td>None</td>
+          </tr>
+          <tr>
+            <td><code>StrandsMLXProvider</code></td>
+            <td>On-device LLM inference on Apple Silicon via MLX Swift LM</td>
+            <td>mlx-swift-lm</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 id="voice">Voice and Streaming</h2>
+      <table>
+        <thead><tr><th>Module</th><th>What it provides</th><th>Dependencies</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>StrandsBidiStreaming</code></td>
+            <td>Bidirectional voice agents — OpenAI Realtime, AWS Nova Sonic, Google Gemini Live</td>
+            <td>aws-sdk-swift</td>
+          </tr>
+          <tr>
+            <td><code>StrandsMLXBidiProvider</code></td>
+            <td>Fully on-device voice pipeline: STT + LLM + TTS on Apple Silicon</td>
+            <td>mlx-audio-swift</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 id="observability">Observability</h2>
+      <table>
+        <thead><tr><th>Module</th><th>What it provides</th><th>Dependencies</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>StrandsOTelObservability</code></td>
+            <td>OpenTelemetry tracing using <code>gen_ai</code> semantic conventions. Exports to Datadog, Jaeger, AWS X-Ray, or any OTLP backend.</td>
+            <td>opentelemetry-swift</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 id="minimal-setup">Minimal Setups</h2>
+      <h3 id="minimal-cloud">Cloud agent</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Package.swift — Cloud agent</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">.target(
+    name: "MyApp",
+    dependencies: [
+        .product(name: "StrandsAgents",         package: "strands-agents-swift"),
+        .product(name: "StrandsAnthropicProvider", package: "strands-agents-swift"),
+    ]
+)</code></pre>
+      </div>
+
+      <h3 id="minimal-local">Local inference agent</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Package.swift — Local agent (Apple Silicon)</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">.target(
+    name: "MyApp",
+    dependencies: [
+        .product(name: "StrandsAgents",     package: "strands-agents-swift"),
+        .product(name: "StrandsMLXProvider", package: "strands-agents-swift"),
+    ]
+)</code></pre>
+      </div>
+
+      <h3 id="minimal-full">Full stack (Bedrock + observability + voice)</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Package.swift — Full stack</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">.target(
+    name: "MyApp",
+    dependencies: [
+        .product(name: "StrandsAgents",          package: "strands-agents-swift"),
+        .product(name: "StrandsBedrockProvider",  package: "strands-agents-swift"),
+        .product(name: "StrandsOTelObservability",package: "strands-agents-swift"),
+        .product(name: "StrandsBidiStreaming",     package: "strands-agents-swift"),
+    ]
+)</code></pre>
+      </div>
+
+      <div class="page-nav">
+        <a class="prev" href="session.html"><span class="nav-dir">← Previous</span><span class="nav-title">Session Persistence</span></a>
+        <span></span>
+      </div>
+    </article>
+  </main>
+  <aside id="toc"></aside>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

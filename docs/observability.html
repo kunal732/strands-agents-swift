@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Observability — Strands Agents Swift</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/swift.min.js"></script>
+</head>
+<body>
+<header></header>
+<div class="layout">
+  <aside id="sidebar"></aside>
+  <main>
+    <article>
+      <div class="breadcrumb"><a href="index.html">Home</a><span class="breadcrumb-sep">›</span>Reference<span class="breadcrumb-sep">›</span>Observability</div>
+      <h1>Observability</h1>
+      <p class="page-description">Traces, metrics, and hooks give you visibility into every agent run — from token counts to per-cycle latency to tool execution.</p>
+
+      <h2 id="opentelemetry">OpenTelemetry Tracing</h2>
+      <p>Add <code>StrandsOTelObservability</code> to your target and pass an <code>OTelObservabilityEngine</code> when creating the agent. Every agent run produces a trace with spans for each model invocation and tool call.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">import StrandsAgents
+import StrandsOTelObservability
+import OpenTelemetryApi
+import OpenTelemetrySdk
+
+// Configure your OTel exporter (Datadog, Jaeger, OTLP, etc.)
+let exporter = OtlpGrpcTraceExporter(endpoint: "http://localhost:4317")
+let tracerProvider = TracerProviderBuilder()
+    .add(spanProcessor: SimpleSpanProcessor(spanExporter: exporter))
+    .build()
+OpenTelemetry.registerTracerProvider(tracerProvider: tracerProvider)
+
+let tracer = tracerProvider.get(instrumentationName: "my-app", instrumentationVersion: "1.0")
+
+let agent = Agent(
+    model: provider,
+    tools: [myTools],
+    observability: OTelObservabilityEngine(tracer: tracer)
+)
+
+let result = try await agent.run("Analyze this dataset")</code></pre>
+      </div>
+
+      <h3 id="backends">Supported backends</h3>
+      <table>
+        <thead><tr><th>Backend</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Datadog</td><td>Uses <code>gen_ai</code> semantic conventions, compatible with LLM Observability</td></tr>
+          <tr><td>Jaeger</td><td>Open-source distributed tracing</td></tr>
+          <tr><td>AWS X-Ray</td><td>Requires the X-Ray OTLP receiver</td></tr>
+          <tr><td>Any OTLP backend</td><td>Standard OpenTelemetry Protocol</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="run-metrics">Run Metrics</h2>
+      <p>Every <code>AgentResult</code> carries metrics for the entire run and per-cycle breakdowns — no extra configuration needed:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">let result = try await agent.run("Summarize the quarterly report")
+
+// Run-level metrics
+print(result.metrics.cycleCount)           // number of reasoning cycles
+print(result.metrics.totalLatencyMs)       // wall-clock time
+print(result.metrics.outputTokensPerSecond)
+
+// Token usage
+print(result.usage.inputTokens)
+print(result.usage.outputTokens)
+print(result.usage.totalTokens)
+
+// Per-cycle breakdown
+for cycle in result.metrics.cycles {
+    print("Cycle \(cycle.cycleNumber):")
+    print("  Latency:     \(cycle.modelLatencyMs)ms")
+    print("  Stop reason: \(cycle.stopReason)")
+    print("  Tools run:   \(cycle.toolsExecuted)")
+    print("  Output tokens: \(cycle.usage.outputTokens)")
+}</code></pre>
+      </div>
+
+      <h2 id="hooks">Lifecycle Hooks</h2>
+      <p>Hooks let you observe or react to agent events without modifying the agent. Register callbacks on <code>agent.hookRegistry</code>:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Registering hooks</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">// Before each model call
+agent.hookRegistry.addCallback(BeforeInvocationEvent.self) { event in
+    print("Sending \(event.messages.count) messages to model")
+}
+
+// After each model call
+agent.hookRegistry.addCallback(AfterInvocationEvent.self) { event in
+    print("Model responded in \(event.latencyMs)ms")
+}
+
+// After each tool execution
+agent.hookRegistry.addCallback(AfterToolEvent.self) { event in
+    print("Tool \(event.toolName): \(event.result.status)")
+}
+
+// At the end of every run — good for logging to a metrics system
+agent.hookRegistry.addCallback(MetricsEvent.self) { event in
+    myMetrics.record(
+        cycles: event.metrics.cycleCount,
+        tokens: event.metrics.totalUsage.totalTokens,
+        latency: event.metrics.totalLatencyMs
+    )
+}</code></pre>
+      </div>
+
+      <h3 id="hook-events">Available hook events</h3>
+      <table>
+        <thead><tr><th>Event</th><th>When it fires</th></tr></thead>
+        <tbody>
+          <tr><td><code>BeforeInvocationEvent</code></td><td>Before each model API call</td></tr>
+          <tr><td><code>AfterInvocationEvent</code></td><td>After each model API call</td></tr>
+          <tr><td><code>BeforeToolEvent</code></td><td>Before a tool is executed</td></tr>
+          <tr><td><code>AfterToolEvent</code></td><td>After a tool returns</td></tr>
+          <tr><td><code>MetricsEvent</code></td><td>At the end of a complete agent run</td></tr>
+        </tbody>
+      </table>
+
+      <div class="page-nav">
+        <a class="prev" href="providers.html"><span class="nav-dir">← Previous</span><span class="nav-title">Model Providers</span></a>
+        <a class="next" href="session.html"><span class="nav-dir">Next →</span><span class="nav-title">Session Persistence</span></a>
+      </div>
+    </article>
+  </main>
+  <aside id="toc"></aside>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agents — Strands Agents Swift</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/swift.min.js"></script>
+</head>
+<body>
+<header></header>
+<div class="layout">
+  <aside id="sidebar"></aside>
+  <main>
+    <article>
+      <div class="breadcrumb"><a href="index.html">Home</a><span class="breadcrumb-sep">›</span>Concepts<span class="breadcrumb-sep">›</span>Agents</div>
+      <h1>Agents</h1>
+      <p class="page-description">An agent is the central orchestrator — it combines a model, tools, and a system prompt into an autonomous reasoning loop.</p>
+
+      <h2 id="the-agent-loop">The Agent Loop</h2>
+      <p>When you call <code>agent.run()</code>, the agent enters a loop:</p>
+      <div class="flow">
+        <div class="flow-row">
+          <span class="flow-node blue">1. Receive input</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-node">2. Call model</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-node purple">3. Execute tools</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-node">4. Back to model</span>
+        </div>
+        <div class="flow-row" style="margin-top: 0.6rem;">
+          <span class="flow-label">Repeats until the model produces a final text response (no more tool calls)</span>
+        </div>
+        <div class="flow-row" style="margin-top: 0.4rem;">
+          <span class="flow-arrow">↓</span>
+        </div>
+        <div class="flow-row">
+          <span class="flow-node green">5. Return result</span>
+        </div>
+      </div>
+      <p>The loop is bounded by <code>maxCycles</code> (default: 10) to prevent runaway execution.</p>
+
+      <h2 id="creating-an-agent">Creating an Agent</h2>
+      <p>The <code>Agent</code> initializer accepts a model provider and optional configuration:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Basic agent</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">let agent = Agent(
+    model: provider,
+    tools: [myTool, anotherTool],
+    systemPrompt: "You are a helpful assistant specializing in Swift development.",
+    maxCycles: 10
+)</code></pre>
+      </div>
+
+      <h2 id="system-prompt">System Prompt</h2>
+      <p>The system prompt defines the agent's persona, constraints, and behavior. It is prepended to every conversation and never shown to the user.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Specialized agents</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">// A focused agent that only answers questions about Swift
+let swiftAgent = Agent(
+    model: provider,
+    systemPrompt: """
+    You are a Swift language expert. Answer only Swift-related questions.
+    Provide code examples whenever helpful. Use Swift 6 concurrency patterns.
+    """
+)
+
+// A task-completing agent with tools
+let assistantAgent = Agent(
+    model: provider,
+    tools: [searchWeb, readFile, writeFile],
+    systemPrompt: "You are a productive assistant. Complete tasks step by step using your tools."
+)</code></pre>
+      </div>
+
+      <h2 id="running-an-agent">Running an Agent</h2>
+      <h3 id="basic-run">Basic run</h3>
+      <p><code>agent.run()</code> blocks until the agent produces a final response and returns an <code>AgentResult</code>:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">let result = try await agent.run("Explain async/await in Swift")
+
+print(result.output)           // the final text response
+print(result.usage.inputTokens)  // tokens consumed
+print(result.metrics.cycleCount) // how many reasoning cycles ran</code></pre>
+      </div>
+
+      <h3 id="streaming-run">Streaming run</h3>
+      <p><code>agent.stream()</code> returns an <code>AsyncStream&lt;StreamEvent&gt;</code> so you can react to each token as it arrives:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">for try await event in agent.stream("Write a README for a Swift package") {
+    switch event {
+    case .textDelta(let token):
+        print(token, terminator: "")   // stream to UI
+    case .toolUse(let use):
+        print("\n[calling \(use.name)...]")
+    case .toolResult(let res):
+        print("[result: \(res.status)]")
+    case .result(let final):
+        print("\n\nFinished: \(final.metrics.totalLatencyMs)ms")
+    default:
+        break
+    }
+}</code></pre>
+      </div>
+
+      <h2 id="conversation-history">Conversation History</h2>
+      <p>Agents maintain conversation history across calls within the same instance. Each <code>run()</code> appends to the existing message history:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Multi-turn conversation</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">let agent = Agent(model: provider)
+
+_ = try await agent.run("My name is Alex.")
+let result = try await agent.run("What's my name?")
+print(result.output)  // "Your name is Alex."
+
+// Inspect or clear history
+print(agent.messages.count)
+agent.clearHistory()</code></pre>
+      </div>
+
+      <h2 id="structured-output">Structured Output</h2>
+      <p>Use <code>runStructured()</code> when you need the model to return a specific Swift type instead of free-form text. See the <a href="structured-output.html">Structured Output</a> page for details.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">@StructuredOutput
+struct WeatherReport {
+    let city: String
+    let temperature: Double
+    let condition: String
+}
+
+let report: WeatherReport = try await agent.runStructured("Weather in London?")
+print(report.temperature)  // 14.5</code></pre>
+      </div>
+
+      <h2 id="hooks">Hooks</h2>
+      <p>Hooks let you observe or intercept agent lifecycle events without modifying the agent itself:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">// Log before each model invocation
+agent.hookRegistry.addCallback(BeforeInvocationEvent.self) { event in
+    print("Sending \(event.messages.count) messages to model")
+}
+
+// Capture metrics after each run
+agent.hookRegistry.addCallback(MetricsEvent.self) { event in
+    print("Cycles: \(event.metrics.cycleCount), Tokens: \(event.metrics.totalUsage.totalTokens)")
+}</code></pre>
+      </div>
+
+      <div class="page-nav">
+        <a class="prev" href="getting-started.html"><span class="nav-dir">← Previous</span><span class="nav-title">Getting Started</span></a>
+        <a class="next" href="tools.html"><span class="nav-dir">Next →</span><span class="nav-title">Tools</span></a>
+      </div>
+    </article>
+  </main>
+  <aside id="toc"></aside>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

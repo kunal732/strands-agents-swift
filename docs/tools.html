@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tools — Strands Agents Swift</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/swift.min.js"></script>
+</head>
+<body>
+<header></header>
+<div class="layout">
+  <aside id="sidebar"></aside>
+  <main>
+    <article>
+      <div class="breadcrumb"><a href="index.html">Home</a><span class="breadcrumb-sep">›</span>Concepts<span class="breadcrumb-sep">›</span>Tools</div>
+      <h1>Tools</h1>
+      <p class="page-description">Tools give agents the ability to act: look things up, call APIs, run code, read files. The model decides which tools to call and when.</p>
+
+      <h2 id="tool-macro">@Tool Macro</h2>
+      <p>The <code>@Tool</code> macro is the primary way to define a tool. Attach it to any Swift function and the compiler generates the JSON schema, tool name, and <code>AgentTool</code> conformance automatically.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Defining tools with @Tool</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">/// Count the number of words in a block of text.
+@Tool
+func wordCount(text: String) -> Int {
+    text.split(whereSeparator: \.isWhitespace).count
+}
+
+/// Evaluate a mathematical expression and return the result.
+@Tool
+func calculator(expression: String) -> String {
+    guard let result = NSExpression(format: expression)
+        .expressionValue(with: nil, context: nil) else {
+        return "Error: invalid expression"
+    }
+    return "\(result)"
+}
+
+let agent = Agent(model: provider, tools: [wordCount, calculator])</code></pre>
+      </div>
+
+      <h3 id="what-the-macro-generates">What the macro generates</h3>
+      <p>For each annotated function, the macro creates two things:</p>
+      <ul>
+        <li>A struct conforming to <code>AgentTool</code> with the JSON schema derived from the parameter types</li>
+        <li>A <code>let</code> binding with the same name as the function that you pass to <code>Agent(tools:)</code></li>
+      </ul>
+      <p>The function itself is unchanged — you can still call it directly as a regular Swift function:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">// Still callable as a plain Swift function
+let count = wordCount(text: "hello world")  // 2</code></pre>
+      </div>
+
+      <h3 id="type-mapping">Type mapping</h3>
+      <table>
+        <thead><tr><th>Swift Type</th><th>JSON Schema</th></tr></thead>
+        <tbody>
+          <tr><td><code>String</code></td><td><code>"type": "string"</code></td></tr>
+          <tr><td><code>Int</code>, <code>Int64</code>, …</td><td><code>"type": "integer"</code></td></tr>
+          <tr><td><code>Double</code>, <code>Float</code></td><td><code>"type": "number"</code></td></tr>
+          <tr><td><code>Bool</code></td><td><code>"type": "boolean"</code></td></tr>
+          <tr><td><code>T?</code> or default value</td><td>Marked optional in schema (omitted from <code>required</code>)</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="optional-parameters">Optional parameters and defaults</h3>
+      <p>Parameters with a default value or <code>?</code> type are treated as optional — they are included in the schema but not in <code>required</code>:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">/// Look up current weather for a city.
+@Tool
+func getWeather(
+    city: String,              // required
+    unit: String = "celsius",  // optional — has a default
+    detailed: Bool = false     // optional — has a default
+) async throws -> String {
+    // fetch from weather API
+    return "22°C, partly cloudy in \(city)"
+}</code></pre>
+      </div>
+
+      <h3 id="async-throwing">Async and throwing tools</h3>
+      <p>Tools can be <code>async</code>, <code>throws</code>, or both. The generated wrapper handles <code>await</code> and catches errors automatically:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">/// Search the web and return a summary of the top results.
+@Tool
+func searchWeb(query: String, maxResults: Int = 5) async throws -> String {
+    let url = URL(string: "https://api.search.example.com?q=\(query)")!
+    let (data, _) = try await URLSession.shared.data(from: url)
+    return String(data: data, encoding: .utf8) ?? "No results"
+}</code></pre>
+      </div>
+
+      <h2 id="concurrent-tools">Concurrent Tool Execution</h2>
+      <p>When a model requests multiple tools in a single response, the agent runs them all concurrently using Swift structured concurrency. This means a model can call <code>searchWeb</code>, <code>calculator</code>, and <code>getWeather</code> simultaneously and wait for all results before continuing.</p>
+      <div class="callout callout-tip">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body"><p>Make your tools <code>async</code> whenever they perform I/O (network, disk) so concurrent execution is truly parallel rather than serialized.</p></div>
+      </div>
+
+      <h2 id="manual-conformance">Manual Conformance</h2>
+      <p>For cases where the macro is not sufficient — complex input decoding, dynamic schemas, or reuse across targets — you can conform to <code>AgentTool</code> directly:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Manual AgentTool conformance</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">struct WordCount: AgentTool {
+    let name = "word_count"
+
+    var toolSpec: ToolSpec {
+        ToolSpec(
+            name: name,
+            description: "Count the number of words in text.",
+            inputSchema: [
+                "type": "object",
+                "properties": [
+                    "text": [
+                        "type": "string",
+                        "description": "The text to count words in"
+                    ]
+                ],
+                "required": ["text"],
+            ]
+        )
+    }
+
+    func call(toolUse: ToolUseBlock, context: ToolContext) async throws -> ToolResultBlock {
+        let text = toolUse.input["text"]?.foundationValue as? String ?? ""
+        let count = text.split(whereSeparator: \.isWhitespace).count
+        return ToolResultBlock(
+            toolUseId: toolUse.toolUseId,
+            status: .success,
+            content: [.text("\(count)")]
+        )
+    }
+}
+
+let agent = Agent(model: provider, tools: [WordCount()])</code></pre>
+      </div>
+
+      <h2 id="tool-context">Tool Context</h2>
+      <p>The <code>ToolContext</code> passed to <code>call(toolUse:context:)</code> provides access to the agent's state, session, and observability span. Useful for tools that need to call the agent recursively or log structured data:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">func call(toolUse: ToolUseBlock, context: ToolContext) async throws -> ToolResultBlock {
+    context.span?.setAttribute("query", toolUse.input["query"]?.foundationValue as? String ?? "")
+    // use context.agentState to read/write shared state
+    return ToolResultBlock(
+        toolUseId: toolUse.toolUseId,
+        status: .success,
+        content: [.text("done")]
+    )
+}</code></pre>
+      </div>
+
+      <h2 id="mcp-tools">MCP Tool Providers</h2>
+      <p>The SDK supports the <a href="https://modelcontextprotocol.io" target="_blank">Model Context Protocol (MCP)</a>. Connect any MCP server as a tool provider — all its tools are available to the agent automatically:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">let mcpProvider = MCPToolProvider(serverURL: URL(string: "http://localhost:3000")!)
+let tools = try await mcpProvider.tools()
+let agent = Agent(model: provider, tools: tools)</code></pre>
+      </div>
+
+      <div class="page-nav">
+        <a class="prev" href="agents.html"><span class="nav-dir">← Previous</span><span class="nav-title">Agents</span></a>
+        <a class="next" href="structured-output.html"><span class="nav-dir">Next →</span><span class="nav-title">Structured Output</span></a>
+      </div>
+    </article>
+  </main>
+  <aside id="toc"></aside>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

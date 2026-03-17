@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Graph — Multi-Agent — Strands Agents Swift</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/swift.min.js"></script>
+</head>
+<body>
+<header></header>
+<div class="layout">
+  <aside id="sidebar"></aside>
+  <main>
+    <article>
+      <div class="breadcrumb"><a href="index.html">Home</a><span class="breadcrumb-sep">›</span><a href="multi-agent.html">Multi-Agent</a><span class="breadcrumb-sep">›</span>Graph</div>
+      <h1>Graph</h1>
+      <p class="page-description">Run agents as nodes in a directed acyclic graph (DAG). Independent nodes execute in parallel; dependent nodes wait for their inputs automatically.</p>
+
+      <h2 id="when-to-use">When to Use Graph</h2>
+      <ul>
+        <li>You know all the steps before execution starts</li>
+        <li>Some steps are independent and can run concurrently</li>
+        <li>You want predictable, auditable execution order</li>
+        <li>Downstream agents need the results of upstream agents</li>
+      </ul>
+
+      <h2 id="how-it-works">How It Works</h2>
+      <p>Each node is an agent with an ID and an optional list of <code>dependencies</code>. The orchestrator runs all nodes whose dependencies are satisfied concurrently, then feeds their outputs to the next nodes.</p>
+
+      <div class="flow">
+        <div class="flow-row">
+          <span class="flow-node blue">research</span>
+          <span class="flow-arrow"> ──┐</span>
+        </div>
+        <div class="flow-row">
+          <span style="margin-left: 6.5rem; color: var(--text-muted)">↓ run in parallel</span>
+        </div>
+        <div class="flow-row">
+          <span class="flow-node blue">fact-check</span>
+          <span class="flow-arrow"> ─┘→</span>
+          <span class="flow-node green">write</span>
+          <span class="flow-label" style="margin-left:0.5rem">(waits for both)</span>
+        </div>
+      </div>
+
+      <h2 id="basic-example">Basic Example</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Research + write pipeline</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">import StrandsAgents
+
+let researchAgent = Agent(
+    model: provider,
+    tools: [searchWeb],
+    systemPrompt: "You are a research assistant. Find accurate, relevant information."
+)
+
+let factCheckAgent = Agent(
+    model: provider,
+    tools: [searchWeb],
+    systemPrompt: "You verify claims. Flag anything unsubstantiated."
+)
+
+let writerAgent = Agent(
+    model: provider,
+    systemPrompt: "You write clear, engaging articles based on provided research."
+)
+
+let graph = GraphOrchestrator(nodes: [
+    GraphNode(id: "research",    agent: researchAgent),
+    GraphNode(id: "fact-check",  agent: factCheckAgent),
+    // "write" receives the outputs of both research and fact-check
+    GraphNode(id: "write",       agent: writerAgent,
+              dependencies: ["research", "fact-check"]),
+])
+
+let result = try await graph.run("Write an article about quantum computing")
+print(result.output)  // final output from the "write" node</code></pre>
+      </div>
+
+      <h2 id="dependencies">Dependencies</h2>
+      <p>A node's output is automatically forwarded as context to each node that declares it as a dependency. You don't need to wire the outputs manually — the orchestrator handles it.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Multi-stage pipeline</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">// Stage 1: two independent agents run in parallel
+GraphNode(id: "outline",    agent: outlineAgent),
+GraphNode(id: "references", agent: referenceAgent),
+
+// Stage 2: draft uses outline + references
+GraphNode(id: "draft",  agent: draftAgent,
+          dependencies: ["outline", "references"]),
+
+// Stage 3: review uses only the draft
+GraphNode(id: "review", agent: reviewAgent,
+          dependencies: ["draft"]),
+
+// Stage 4: final polish uses draft + review
+GraphNode(id: "polish", agent: polishAgent,
+          dependencies: ["draft", "review"])</code></pre>
+      </div>
+
+      <h2 id="parallel-execution">Parallel Execution</h2>
+      <p>Nodes without dependencies — or whose dependencies have all completed — run concurrently. In the example above, <code>outline</code> and <code>references</code> run at the same time. Execution is ordered by the dependency graph, not by the order you declare the nodes.</p>
+
+      <div class="callout callout-tip">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body"><p>Use parallel stages for tasks like summarization, classification, or extraction that do not depend on each other. This can cut wall-clock time significantly on complex pipelines.</p></div>
+      </div>
+
+      <h2 id="accessing-results">Accessing Intermediate Results</h2>
+      <p>The <code>GraphResult</code> includes the outputs of every node, keyed by node ID:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">let result = try await graph.run("Write an article about black holes")
+
+// Final output (from the last node in the graph)
+print(result.output)
+
+// Output from a specific intermediate node
+print(result.nodeOutputs["research"] ?? "")
+print(result.nodeOutputs["fact-check"] ?? "")</code></pre>
+      </div>
+
+      <h2 id="real-world-example">Real-World Example: Code Review Pipeline</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Parallel code review</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">let securityReviewer = Agent(
+    model: provider,
+    systemPrompt: "You review code for security vulnerabilities. Be specific."
+)
+let performanceReviewer = Agent(
+    model: provider,
+    systemPrompt: "You review code for performance issues. Suggest optimizations."
+)
+let styleReviewer = Agent(
+    model: provider,
+    systemPrompt: "You review code for style and readability. Suggest improvements."
+)
+let summaryWriter = Agent(
+    model: provider,
+    systemPrompt: "You synthesize multiple code reviews into a single actionable summary."
+)
+
+let graph = GraphOrchestrator(nodes: [
+    GraphNode(id: "security",    agent: securityReviewer),
+    GraphNode(id: "performance", agent: performanceReviewer),
+    GraphNode(id: "style",       agent: styleReviewer),
+    GraphNode(id: "summary",     agent: summaryWriter,
+              dependencies: ["security", "performance", "style"]),
+])
+
+let code = """
+func fetchUser(id: String) -> User? {
+    let query = "SELECT * FROM users WHERE id = '\(id)'"
+    return db.execute(query).first
+}
+"""
+
+let result = try await graph.run("Review this Swift code:\n\n\(code)")
+print(result.output)  // synthesized review from all three reviewers</code></pre>
+      </div>
+
+      <div class="page-nav">
+        <a class="prev" href="multi-agent.html"><span class="nav-dir">← Previous</span><span class="nav-title">Multi-Agent Overview</span></a>
+        <a class="next" href="multi-agent-swarm.html"><span class="nav-dir">Next →</span><span class="nav-title">Swarm</span></a>
+      </div>
+    </article>
+  </main>
+  <aside id="toc"></aside>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent-to-Agent (A2A) — Strands Agents Swift</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/swift.min.js"></script>
+</head>
+<body>
+<header></header>
+<div class="layout">
+  <aside id="sidebar"></aside>
+  <main>
+    <article>
+      <div class="breadcrumb"><a href="index.html">Home</a><span class="breadcrumb-sep">›</span><a href="multi-agent.html">Multi-Agent</a><span class="breadcrumb-sep">›</span>Agent-to-Agent (A2A)</div>
+      <h1>Agent-to-Agent (A2A)</h1>
+      <p class="page-description">Agents in different processes or services communicate over HTTP. A remote agent looks exactly like a local tool — callers don't need to know where it lives.</p>
+
+      <h2 id="when-to-use">When to Use A2A</h2>
+      <ul>
+        <li>Agents are deployed as separate services (microservices, lambdas, containers)</li>
+        <li>You want to call a Python or TypeScript Strands agent from Swift</li>
+        <li>You need to reuse an agent across multiple apps or platforms</li>
+        <li>An agent requires different hardware (e.g. a GPU server for image generation)</li>
+      </ul>
+
+      <h2 id="how-it-works">How It Works</h2>
+      <div class="flow">
+        <div class="flow-row">
+          <span class="flow-node blue">App (Swift)</span>
+          <span class="flow-arrow">→ A2AClient (tool call) →</span>
+          <span class="flow-node purple">HTTP POST</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-node">A2AServer</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-node green">Remote Agent</span>
+        </div>
+        <div class="flow-row" style="margin-top: 0.5rem;">
+          <span class="flow-label">The local agent sees A2AClient as a regular tool. The remote agent is unaware it is being called remotely.</span>
+        </div>
+      </div>
+
+      <h2 id="serving-an-agent">Serving an Agent</h2>
+      <p>Wrap any agent in an <code>A2AServer</code> to expose it over HTTP. The server handles request parsing, agent invocation, and response serialization:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">research-service/main.swift</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">import StrandsAgents
+
+/// Search the web for current information on a topic.
+@Tool
+func searchWeb(query: String) async throws -> String {
+    // your search API call here
+    return "Results for: \(query)"
+}
+
+let researchAgent = Agent(
+    model: try BedrockProvider(config: BedrockConfig(
+        modelId: "us.anthropic.claude-sonnet-4-20250514-v1:0"
+    )),
+    tools: [searchWeb],
+    systemPrompt: "You are a research assistant. Search the web and summarize findings concisely."
+)
+
+// Expose the agent on port 8080
+let server = A2AServer(agent: researchAgent, name: "Research Agent", port: 8080)
+try await server.start()
+// Server runs at http://localhost:8080</code></pre>
+      </div>
+
+      <h2 id="calling-a-remote-agent">Calling a Remote Agent</h2>
+      <p>Create an <code>A2AClient</code> with the endpoint URL. Pass it to <code>Agent(tools:)</code> — it behaves like any other tool from the caller's perspective:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">main-app/main.swift</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">import StrandsAgents
+
+// Point at the remote research agent
+let remoteResearcher = A2AClient(
+    name: "research",
+    description: "Search the web and summarize information on any topic",
+    endpoint: URL(string: "http://research-service:8080")!
+)
+
+// The local agent calls the remote agent exactly like a local tool
+let agent = Agent(
+    model: try BedrockProvider(config: BedrockConfig(
+        modelId: "us.anthropic.claude-sonnet-4-20250514-v1:0"
+    )),
+    tools: [remoteResearcher, writeDocument],
+    systemPrompt: "You write detailed reports. Use the research tool to gather information first."
+)
+
+let result = try await agent.run("Write a report on the current state of Swift concurrency")
+print(result.output)</code></pre>
+      </div>
+
+      <h2 id="cross-language">Cross-Language Agents</h2>
+      <p>A2A is language-agnostic. A Swift app can call a Python Strands agent, and vice versa. The only requirement is that both sides implement the A2A HTTP protocol:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Calling a Python Strands agent from Swift</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">// Python service running at research.internal:8080
+// (deployed with the Python Strands SDK's A2A server)
+let pythonAgent = A2AClient(
+    name: "python_researcher",
+    description: "A Python-based research agent with access to specialized databases",
+    endpoint: URL(string: "https://research.internal:8080")!
+)
+
+let swiftAgent = Agent(model: provider, tools: [pythonAgent])
+let result = try await swiftAgent.run("What papers were published on LLM agents in 2024?")</code></pre>
+      </div>
+
+      <h2 id="authentication">Authentication</h2>
+      <p>Pass a bearer token or other credentials when creating the client. The token is included in every request to the remote agent:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">let client = A2AClient(
+    name: "secure_agent",
+    description: "An agent behind an auth wall",
+    endpoint: URL(string: "https://agents.example.com/researcher")!,
+    bearerToken: "eyJhbGciOiJSUzI1NiJ9..."
+)</code></pre>
+      </div>
+
+      <h2 id="vs-graph-swarm">A2A vs. Graph and Swarm</h2>
+      <table>
+        <thead><tr><th></th><th>Graph / Swarm</th><th>A2A</th></tr></thead>
+        <tbody>
+          <tr><td>Agent location</td><td>Same process</td><td>Any process or host</td></tr>
+          <tr><td>Communication</td><td>In-memory function calls</td><td>HTTP</td></tr>
+          <tr><td>Languages</td><td>Swift only</td><td>Python, TypeScript, Swift, any</td></tr>
+          <tr><td>Latency</td><td>Microseconds</td><td>Network round-trip</td></tr>
+          <tr><td>Independent deploy</td><td>No</td><td>Yes</td></tr>
+          <tr><td>Scaling</td><td>Single process</td><td>Independent horizontal scaling</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-tip">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body"><p>Use A2A with Graph or Swarm — they are not mutually exclusive. A graph node can be an A2A client, and a swarm member can hand off to a remote agent over A2A.</p></div>
+      </div>
+
+      <div class="page-nav">
+        <a class="prev" href="multi-agent-swarm.html"><span class="nav-dir">← Previous</span><span class="nav-title">Swarm</span></a>
+        <a class="next" href="voice-agents.html"><span class="nav-dir">Next →</span><span class="nav-title">Voice Agents</span></a>
+      </div>
+    </article>
+  </main>
+  <aside id="toc"></aside>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

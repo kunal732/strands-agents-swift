@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session Persistence — Strands Agents Swift</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/swift.min.js"></script>
+</head>
+<body>
+<header></header>
+<div class="layout">
+  <aside id="sidebar"></aside>
+  <main>
+    <article>
+      <div class="breadcrumb"><a href="index.html">Home</a><span class="breadcrumb-sep">›</span>Reference<span class="breadcrumb-sep">›</span>Session Persistence</div>
+      <h1>Session Persistence</h1>
+      <p class="page-description">Save conversation history across app launches, devices, or users. Pick from file storage for local use or S3 for cross-device sync.</p>
+
+      <h2 id="overview">Overview</h2>
+      <p>By default, an agent's conversation history lives in memory and is lost when the agent is deallocated. A <code>SessionManager</code> persists messages after each exchange, so conversations survive app restarts and can be restored on any device.</p>
+
+      <h2 id="file-storage">File Storage</h2>
+      <p>Best for single-device use. Messages are written atomically to disk after each turn:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">import StrandsAgents
+
+let sessionsDir = FileManager.default.urls(
+    for: .applicationSupportDirectory, in: .userDomainMask
+)[0].appendingPathComponent("Sessions")
+
+let repo = FileSessionRepository(directory: sessionsDir)
+let manager = RepositorySessionManager(sessionId: "user-123", repository: repo)
+
+let agent = Agent(
+    model: provider,
+    sessionManager: manager
+)
+
+// First run — history saved automatically
+_ = try await agent.run("My name is Alex.")
+
+// Restart app, recreate agent with the same sessionId
+let restoredManager = RepositorySessionManager(sessionId: "user-123", repository: repo)
+let restoredAgent = Agent(model: provider, sessionManager: restoredManager)
+
+let result = try await restoredAgent.run("What's my name?")
+print(result.output)  // "Your name is Alex."</code></pre>
+      </div>
+
+      <h2 id="s3-storage">S3 Storage</h2>
+      <p>Best for multi-device or multi-user apps. Sessions are stored in an S3 bucket with a per-user prefix:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">import StrandsAgents
+
+let repo = S3SessionRepository(
+    bucket: "my-app-sessions",
+    prefix: "users/\(userId)/"
+)
+let manager = RepositorySessionManager(sessionId: "conversation-1", repository: repo)
+let agent = Agent(model: provider, sessionManager: manager)</code></pre>
+      </div>
+
+      <h2 id="session-ids">Session IDs</h2>
+      <p>The session ID is an arbitrary string that identifies a conversation. Use whatever makes sense for your data model:</p>
+      <ul>
+        <li><code>"user-\(userId)"</code> — one persistent conversation per user</li>
+        <li><code>"chat-\(UUID())"</code> — a new conversation per session</li>
+        <li><code>"support-ticket-\(ticketId)"</code> — a conversation tied to a support ticket</li>
+      </ul>
+
+      <h2 id="guarantees">Storage Guarantees</h2>
+      <table>
+        <thead><tr><th>Feature</th><th>File</th><th>S3</th></tr></thead>
+        <tbody>
+          <tr><td>Atomic writes</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Version tracking</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Broken history repair</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Cross-device sync</td><td>—</td><td>✓</td></tr>
+          <tr><td>Offline access</td><td>✓</td><td>—</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-tip">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body"><p>Combine S3 storage with a <a href="agents.html#conversation-history">sliding window conversation manager</a> to keep token usage bounded while retaining an unlimited persistent history in S3.</p></div>
+      </div>
+
+      <div class="page-nav">
+        <a class="prev" href="observability.html"><span class="nav-dir">← Previous</span><span class="nav-title">Observability</span></a>
+        <a class="next" href="modules.html"><span class="nav-dir">Next →</span><span class="nav-title">Modules</span></a>
+      </div>
+    </article>
+  </main>
+  <aside id="toc"></aside>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>

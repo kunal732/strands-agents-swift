@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Swarm — Multi-Agent — Strands Agents Swift</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/swift.min.js"></script>
+</head>
+<body>
+<header></header>
+<div class="layout">
+  <aside id="sidebar"></aside>
+  <main>
+    <article>
+      <div class="breadcrumb"><a href="index.html">Home</a><span class="breadcrumb-sep">›</span><a href="multi-agent.html">Multi-Agent</a><span class="breadcrumb-sep">›</span>Swarm</div>
+      <h1>Swarm</h1>
+      <p class="page-description">Agents decide at runtime who handles the next step. Execution begins at an entry point and flows through handoffs until a final answer is produced.</p>
+
+      <h2 id="when-to-use">When to Use Swarm</h2>
+      <ul>
+        <li>The routing logic depends on the content of each response</li>
+        <li>You cannot predict the sequence of agents ahead of time</li>
+        <li>Tasks are open-ended and may need different specialists depending on what comes up</li>
+        <li>You want the model itself to decide who is best suited for each step</li>
+      </ul>
+
+      <h2 id="how-it-works">How It Works</h2>
+      <p>Each agent in the swarm is a <code>SwarmMember</code> with an ID and a description. The swarm exposes all other members' descriptions to the active agent via a hidden <code>handoff</code> tool. When an agent decides it has finished its part, it hands off to another member by name.</p>
+
+      <div class="flow">
+        <div class="flow-row">
+          <span class="flow-node blue">User Input</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-node">triage</span>
+          <span class="flow-arrow">→ handoff →</span>
+          <span class="flow-node purple">specialist</span>
+        </div>
+        <div class="flow-row" style="margin-top: 0.5rem; padding-left: 20rem;">
+          <span class="flow-arrow">→ handoff →</span>
+          <span class="flow-node green">writer</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-node blue">Final Response</span>
+        </div>
+      </div>
+
+      <h2 id="basic-example">Basic Example</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Triage → Specialist → Writer</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">import StrandsAgents
+
+let triageAgent = Agent(
+    model: provider,
+    systemPrompt: """
+    You triage incoming requests and hand off to the right specialist.
+    Available specialists:
+    - "swift-expert": Swift language and SDK questions
+    - "cloud-expert": AWS, cloud infrastructure, networking
+    - "writer": Turning technical content into clear prose
+    Hand off immediately — do not try to answer yourself.
+    """
+)
+
+let swiftExpert = Agent(
+    model: provider,
+    systemPrompt: "You are a Swift language expert. Answer in depth with code examples. Hand off to 'writer' when done."
+)
+
+let cloudExpert = Agent(
+    model: provider,
+    systemPrompt: "You are an AWS and cloud infrastructure expert. Give precise, actionable answers. Hand off to 'writer' when done."
+)
+
+let writerAgent = Agent(
+    model: provider,
+    systemPrompt: "You take expert technical content and rewrite it as clear, well-structured prose for developers."
+)
+
+let swarm = SwarmOrchestrator(
+    members: [
+        SwarmMember(id: "triage",       description: "Routes requests to the right specialist", agent: triageAgent),
+        SwarmMember(id: "swift-expert",  description: "Answers Swift language questions",         agent: swiftExpert),
+        SwarmMember(id: "cloud-expert",  description: "Answers cloud and AWS questions",          agent: cloudExpert),
+        SwarmMember(id: "writer",        description: "Writes the final polished response",        agent: writerAgent),
+    ],
+    entryPoint: "triage"
+)
+
+let result = try await swarm.run("How do I deploy a Swift Vapor app on AWS Lambda?")
+print(result.output)</code></pre>
+      </div>
+
+      <h2 id="handoffs">Handoffs</h2>
+      <p>A handoff transfers execution to another agent, carrying the full conversation context. The receiving agent sees everything that happened before — all previous messages, tool results, and handoff notes.</p>
+
+      <div class="callout callout-note">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body"><p>Agents must be explicitly instructed in their <code>systemPrompt</code> to hand off and to whom. The model will not hand off unless told it should. Keep the list of available agents and their roles in the system prompt.</p></div>
+      </div>
+
+      <h2 id="entry-point">Entry Point</h2>
+      <p>The <code>entryPoint</code> parameter specifies which agent receives the user's initial message. Usually this is a triage or router agent that assesses the task and delegates, but it can be any member:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">// Start directly at a specialist for focused tasks
+let swarm = SwarmOrchestrator(
+    members: [
+        SwarmMember(id: "analyst", description: "Analyzes data",   agent: analystAgent),
+        SwarmMember(id: "writer",  description: "Writes reports",  agent: writerAgent),
+    ],
+    entryPoint: "analyst"  // skip triage — always start with the analyst
+)</code></pre>
+      </div>
+
+      <h2 id="real-world-example">Real-World Example: Customer Support Swarm</h2>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Support triage system</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">let triageBot = Agent(
+    model: provider,
+    systemPrompt: """
+    You are a support triage agent. Classify the user's request and hand off:
+    - Billing questions → "billing-agent"
+    - Technical issues → "technical-agent"
+    - Account questions → "account-agent"
+    Do not answer. Only triage and hand off.
+    """
+)
+
+let billingAgent = Agent(
+    model: provider,
+    tools: [lookupInvoice, issueRefund],
+    systemPrompt: "You handle billing issues. You have tools to look up invoices and issue refunds."
+)
+
+let technicalAgent = Agent(
+    model: provider,
+    tools: [searchDocs, checkSystemStatus],
+    systemPrompt: "You resolve technical issues. Search the docs and check system status to diagnose problems."
+)
+
+let accountAgent = Agent(
+    model: provider,
+    tools: [lookupAccount, resetPassword],
+    systemPrompt: "You handle account questions — password resets, profile updates, account status."
+)
+
+let swarm = SwarmOrchestrator(
+    members: [
+        SwarmMember(id: "triage",    description: "Classifies and routes support requests", agent: triageBot),
+        SwarmMember(id: "billing",   description: "Handles billing and payment issues",      agent: billingAgent),
+        SwarmMember(id: "technical", description: "Resolves technical problems",             agent: technicalAgent),
+        SwarmMember(id: "account",   description: "Manages account settings",                agent: accountAgent),
+    ],
+    entryPoint: "triage"
+)
+
+let result = try await swarm.run("I was charged twice for my subscription last month")
+print(result.output)</code></pre>
+      </div>
+
+      <h2 id="vs-graph">Swarm vs. Graph</h2>
+      <table>
+        <thead><tr><th></th><th>Graph</th><th>Swarm</th></tr></thead>
+        <tbody>
+          <tr><td>Routing</td><td>Declared by you</td><td>Decided by the model</td></tr>
+          <tr><td>Execution order</td><td>Deterministic</td><td>Dynamic</td></tr>
+          <tr><td>Parallelism</td><td>Built-in (independent nodes)</td><td>Not built-in</td></tr>
+          <tr><td>Best for</td><td>Known, structured pipelines</td><td>Open-ended tasks</td></tr>
+          <tr><td>Predictability</td><td>High</td><td>Lower</td></tr>
+        </tbody>
+      </table>
+
+      <div class="page-nav">
+        <a class="prev" href="multi-agent-graph.html"><span class="nav-dir">← Previous</span><span class="nav-title">Graph</span></a>
+        <a class="next" href="multi-agent-a2a.html"><span class="nav-dir">Next →</span><span class="nav-title">Agent-to-Agent (A2A)</span></a>
+      </div>
+    </article>
+  </main>
+  <aside id="toc"></aside>
+</div>
+<script src="nav.js"></script>
+</body>
+</html>
