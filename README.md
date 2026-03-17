@@ -173,19 +173,43 @@ Tools requested in the same turn run concurrently by default.
 
 ## Structured Output
 
+`runStructured` forces the model to produce JSON matching a schema you define, then decodes it directly into your Swift type. Under the hood it registers a hidden tool whose input schema is your type's `jsonSchema`; the model must call that tool to respond, guaranteeing the output is valid and decodable.
+
+1. Define a `Codable` struct conforming to `StructuredOutput` and provide its JSON schema.
+2. Call `agent.runStructured(prompt)` -- the return type is inferred from context.
+
 ```swift
 struct Recipe: StructuredOutput {
     let name: String
     let ingredients: [String]
-    static var jsonSchema: JSONSchema { ... }
+    let steps: [String]
+
+    static var jsonSchema: JSONSchema {
+        [
+            "type": "object",
+            "properties": [
+                "name":        ["type": "string"],
+                "ingredients": ["type": "array", "items": ["type": "string"]],
+                "steps":       ["type": "array", "items": ["type": "string"]],
+            ],
+            "required": ["name", "ingredients", "steps"],
+        ]
+    }
 }
 
+let agent = Agent(model: provider)
 let recipe: Recipe = try await agent.runStructured("Give me a pasta recipe")
+
+print(recipe.name)              // "Spaghetti Carbonara"
+print(recipe.ingredients)       // ["200g spaghetti", "3 eggs", ...]
+print(recipe.steps[0])          // "Boil salted water..."
 ```
 
 ## Multi-Agent
 
 ### Graph (DAG-based pipeline)
+
+`GraphOrchestrator` runs agents as nodes in a directed acyclic graph. Each node declares which other nodes it depends on, so independent agents run in parallel while dependent agents wait for their inputs. Use this when the workflow is known up front and you want predictable, ordered execution.
 
 ```swift
 let graph = GraphOrchestrator(nodes: [
@@ -197,6 +221,8 @@ let result = try await graph.run("Write about quantum computing")
 
 ### Swarm (autonomous handoffs)
 
+`SwarmOrchestrator` lets agents decide at runtime which agent should handle the next step. Execution starts at the entry-point agent; any agent can hand off to another by name based on the task at hand. Use this for open-ended workflows where the routing logic is too dynamic to express as a fixed graph.
+
 ```swift
 let swarm = SwarmOrchestrator(members: [
     SwarmMember(id: "researcher", description: "Gathers information", agent: researchAgent),
@@ -206,6 +232,8 @@ let result = try await swarm.run("Write about quantum computing")
 ```
 
 ### A2A (Agent-to-Agent)
+
+A2A lets agents communicate across process or network boundaries using a standard HTTP protocol. Serve any agent as an HTTP endpoint with `A2AServer`, then call it from another agent via `A2AClient` -- which acts as a regular tool from the calling agent's perspective. This enables distributing agents across services or machines without changing how they are defined.
 
 ```swift
 // Serve an agent over HTTP
