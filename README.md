@@ -35,37 +35,20 @@ Add the modules you need:
 import StrandsAgents
 import StrandsBedrockProvider
 
-/// Fetch current weather from Open-Meteo (free, no API key)
+/// Count the number of words in text.
 @Tool
-func getWeather(city: String) async throws -> String {
-    let geocodeURL = URL(string: "https://geocoding-api.open-meteo.com/v1/search?name=\(city)&count=1")!
-    let (geoData, _) = try await URLSession.shared.data(from: geocodeURL)
-    let geo = try JSONSerialization.jsonObject(with: geoData) as? [String: Any]
-    let results = geo?["results"] as? [[String: Any]]
-    guard let lat = results?.first?["latitude"] as? Double,
-          let lon = results?.first?["longitude"] as? Double else {
-        return "Could not find \(city)"
-    }
-
-    let weatherURL = URL(string: "https://api.open-meteo.com/v1/forecast?latitude=\(lat)&longitude=\(lon)&current=temperature_2m,wind_speed_10m&temperature_unit=fahrenheit")!
-    let (wxData, _) = try await URLSession.shared.data(from: weatherURL)
-    let wx = try JSONSerialization.jsonObject(with: wxData) as? [String: Any]
-    let current = wx?["current"] as? [String: Any]
-    let temp = current?["temperature_2m"] as? Double ?? 0
-    let wind = current?["wind_speed_10m"] as? Double ?? 0
-
-    return "\(city): \(temp)F, wind \(wind) mph"
+func wordCount(text: String) -> Int {
+    text.split(whereSeparator: \.isWhitespace).count
 }
 
 let agent = Agent(
     model: try BedrockProvider(config: BedrockConfig(
         modelId: "us.anthropic.claude-sonnet-4-20250514-v1:0"
     )),
-    tools: [getWeather],
-    systemPrompt: "You are a helpful assistant."
+    tools: [wordCount]
 )
 
-let result = try await agent.run("What's the weather in San Francisco?")
+let result = try await agent.run("How many words are in this sentence?")
 print(result)
 ```
 
@@ -74,7 +57,7 @@ print(result)
 `agent.stream()` returns tokens as they generate, so you can display the response in real time:
 
 ```swift
-for try await event in agent.stream("What's the weather in Tokyo?") {
+for try await event in agent.stream("How many words are in the Declaration of Independence?") {
     switch event {
     case .textDelta(let text):
         // Prints each token as it arrives (like a typing effect)
@@ -130,6 +113,12 @@ let agent = Agent(
 Define tools as annotated functions. The `@Tool` macro generates the tool name, JSON schema, and `AgentTool` conformance from the function signature. Parameter types map to schema types (`String` -> `"string"`, `Int` -> `"integer"`, `Double` -> `"number"`, `Bool` -> `"boolean"`). Default values make parameters optional. The doc comment becomes the tool description.
 
 ```swift
+/// Count the number of words in text.
+@Tool
+func wordCount(text: String) -> Int {
+    text.split(whereSeparator: \.isWhitespace).count
+}
+
 /// Evaluate a math expression
 @Tool
 func calculator(expression: String) -> String {
@@ -137,20 +126,13 @@ func calculator(expression: String) -> String {
     return "\(result ?? "error")"
 }
 
-/// Get the current date and time
-@Tool
-func getTime() -> String {
-    return DateFormatter.localizedString(from: Date(), dateStyle: .full, timeStyle: .short)
-}
-
-let agent = Agent(model: provider, tools: [getWeather, calculator, getTime])
+let agent = Agent(model: provider, tools: [wordCount, calculator])
 ```
 
-`@Tool` functions are still regular functions -- you can call them directly:
+`@Tool` functions are still regular functions:
 
 ```swift
-let weather = try await getWeather(city: "Tokyo")
-let time = getTime()
+let count = wordCount(text: "hello world")  // 2
 ```
 
 Tools requested in the same turn run concurrently by default.
@@ -208,14 +190,9 @@ let agent = Agent(model: provider, tools: [remote])
 ```swift
 import StrandsBidiStreaming
 
-@Tool
-func getWeather(city: String) async throws -> String {
-    return "72F, sunny in \(city)"
-}
-
 let agent = BidiAgent(
     model: OpenAIRealtimeModel(model: "gpt-4o-realtime-preview"),
-    tools: [getWeather],
+    tools: [wordCount],
     config: BidiSessionConfig(voice: "alloy")
 )
 
@@ -237,7 +214,7 @@ let agent = MLXBidiFactory.createAgent(
     llmProcessor: MLXLLMProcessor(modelId: "mlx-community/Qwen3-8B-4bit"),
     sttProcessor: MLXSTTProcessor(model: glmASRModel),
     ttsProcessor: MLXTTSProcessor(model: sopranoModel),
-    tools: [getWeather]
+    tools: [wordCount]
 )
 ```
 
