@@ -110,7 +110,7 @@ let agent = Agent(
 
 ## Tools
 
-Define tools as annotated functions. The `@Tool` macro generates the tool name, JSON schema, and `AgentTool` conformance from the function signature. Parameter types map to schema types (`String` -> `"string"`, `Int` -> `"integer"`, `Double` -> `"number"`, `Bool` -> `"boolean"`). Default values make parameters optional. The doc comment becomes the tool description.
+The Swift implementation of Strands Agents uses a `@Tool` macro to generate the boilerplate for defining a tool. The macro derives the tool name, JSON schema, and `AgentTool` conformance from the function signature. The doc comment becomes the tool description that the model sees.
 
 ```swift
 /// Count the number of words in text.
@@ -129,10 +129,44 @@ func calculator(expression: String) -> String {
 let agent = Agent(model: provider, tools: [wordCount, calculator])
 ```
 
-`@Tool` functions are still regular functions:
+`@Tool` functions are still regular Swift functions -- you can call them directly:
 
 ```swift
 let count = wordCount(text: "hello world")  // 2
+```
+
+### Defining tools without the macro
+
+You can also define tools by conforming to the `AgentTool` protocol directly:
+
+```swift
+struct WordCount: AgentTool {
+    let name = "word_count"
+
+    var toolSpec: ToolSpec {
+        ToolSpec(
+            name: name,
+            description: "Count the number of words in text.",
+            inputSchema: [
+                "type": "object",
+                "properties": ["text": ["type": "string", "description": "The text to count words in"]],
+                "required": ["text"],
+            ]
+        )
+    }
+
+    func call(toolUse: ToolUseBlock, context: ToolContext) async throws -> ToolResultBlock {
+        let text = toolUse.input["text"]?.foundationValue as? String ?? ""
+        let count = text.split(whereSeparator: \.isWhitespace).count
+        return ToolResultBlock(
+            toolUseId: toolUse.toolUseId,
+            status: .success,
+            content: [.text("\(count)")]
+        )
+    }
+}
+
+let agent = Agent(model: provider, tools: [WordCount()])
 ```
 
 Tools requested in the same turn run concurrently by default.
