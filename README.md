@@ -35,11 +35,18 @@ Add the modules you need:
 import StrandsAgents
 import StrandsBedrockProvider
 
+/// Get the current weather for a city
+@Tool
+func getWeather(city: String) async throws -> String {
+    // fetch weather...
+    return "72F, sunny in \(city)"
+}
+
 let agent = Agent(
     model: try BedrockProvider(config: BedrockConfig(
         modelId: "us.anthropic.claude-sonnet-4-20250514-v1:0"
     )),
-    tools: [WeatherTool()],
+    tools: [getWeather],
     systemPrompt: "You are a helpful assistant."
 )
 
@@ -98,11 +105,12 @@ let agent = Agent(
 
 ## Tools
 
+Define tools as annotated functions. The `@Tool` macro generates the tool name, JSON schema, and `AgentTool` conformance from the function signature. Parameter types map to JSON schema types. Default values make parameters optional. The doc comment becomes the tool description.
+
 ```swift
 /// Get the current weather for a city
 @Tool
 func getWeather(city: String, unit: String = "fahrenheit") async throws -> String {
-    // fetch weather...
     return "72F, sunny in \(city)"
 }
 
@@ -113,10 +121,20 @@ func calculator(expression: String) -> String {
     return "\(result ?? "error")"
 }
 
-let agent = Agent(model: provider, tools: [getWeather, calculator])
+/// Get the current date and time
+@Tool
+func getTime() -> String {
+    return DateFormatter.localizedString(from: Date(), dateStyle: .full, timeStyle: .short)
+}
+
+let agent = Agent(model: provider, tools: [getWeather, calculator, getTime])
 ```
 
-The `@Tool` macro generates the tool name, JSON schema, and `AgentTool` conformance from the function signature. Parameter types map to JSON schema types. Default values make parameters optional. The doc comment becomes the tool description.
+Tools can also be called directly as regular Swift functions:
+
+```swift
+let weather = try await getWeather(city: "Tokyo")
+```
 
 Tools requested in the same turn run concurrently by default.
 
@@ -173,9 +191,14 @@ let agent = Agent(model: provider, tools: [remote])
 ```swift
 import StrandsBidiStreaming
 
+@Tool
+func getWeather(city: String) async throws -> String {
+    return "72F, sunny in \(city)"
+}
+
 let agent = BidiAgent(
     model: OpenAIRealtimeModel(model: "gpt-4o-realtime-preview"),
-    tools: [WeatherTool()],
+    tools: [getWeather],
     config: BidiSessionConfig(voice: "alloy")
 )
 
@@ -197,7 +220,7 @@ let agent = MLXBidiFactory.createAgent(
     llmProcessor: MLXLLMProcessor(modelId: "mlx-community/Qwen3-8B-4bit"),
     sttProcessor: MLXSTTProcessor(model: glmASRModel),
     ttsProcessor: MLXTTSProcessor(model: sopranoModel),
-    tools: [WeatherTool()]
+    tools: [getWeather]
 )
 ```
 
@@ -245,7 +268,7 @@ let agent = Agent(
 )
 ```
 
-Exports to Datadog, Jaeger, AWS X-Ray, or any OTEL-compatible backend.
+Exports to Datadog, Jaeger, AWS X-Ray, or any OTEL-compatible backend. Traces use the OpenTelemetry `gen_ai` semantic conventions for compatibility with Datadog LLM Observability.
 
 Every invocation collects per-cycle metrics:
 
