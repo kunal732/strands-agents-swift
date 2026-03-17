@@ -175,26 +175,15 @@ Tools requested in the same turn run concurrently by default.
 
 `runStructured` forces the model to produce JSON matching a schema you define, then decodes it directly into your Swift type. Under the hood it registers a hidden tool whose input schema is your type's `jsonSchema`; the model must call that tool to respond, guaranteeing the output is valid and decodable.
 
-1. Define a `Codable` struct conforming to `StructuredOutput` and provide its JSON schema.
-2. Call `agent.runStructured(prompt)` -- the return type is inferred from context.
+Apply `@StructuredOutput` to a `Codable` struct -- the macro synthesizes the JSON schema automatically. Then call `agent.runStructured(prompt)`; the return type is inferred from context.
 
 ```swift
-struct Recipe: StructuredOutput {
+@StructuredOutput
+struct Recipe {
     let name: String
     let ingredients: [String]
     let steps: [String]
-
-    static var jsonSchema: JSONSchema {
-        [
-            "type": "object",
-            "properties": [
-                "name":        ["type": "string"],
-                "ingredients": ["type": "array", "items": ["type": "string"]],
-                "steps":       ["type": "array", "items": ["type": "string"]],
-            ],
-            "required": ["name", "ingredients", "steps"],
-        ]
-    }
+    let note: String?   // optional -- omitted from "required"
 }
 
 let agent = Agent(model: provider)
@@ -205,44 +194,115 @@ print(recipe.ingredients)       // ["200g spaghetti", "3 eggs", ...]
 print(recipe.steps[0])          // "Boil salted water..."
 ```
 
+The macro maps Swift types to JSON schema: `String` -> `"string"`, `Int` -> `"integer"`, `Double`/`Float` -> `"number"`, `Bool` -> `"boolean"`, `[T]` -> `"array"`, and `T?` marks the property optional (omitted from `"required"`).
+
+If you need a custom schema, skip the macro and conform manually:
+
+```swift
+struct WeatherReport: StructuredOutput {
+    let city: String
+    let temperature: Double
+
+    static var jsonSchema: JSONSchema {
+        [
+            "type": "object",
+            "properties": [
+                "city":        ["type": "string"],
+                "temperature": ["type": "number"],
+            ],
+            "required": ["city", "temperature"],
+        ]
+    }
+}
+```
+
 ## Multi-Agent
 
-### Graph (DAG-based pipeline)
+A single agent handles one task at a time. Multi-agent systems let you break a complex task into pieces and assign each piece to a specialized agent -- one might search the web, another might write prose, another might review code. The agents coordinate so the final result is better than any one agent could produce alone.
 
-`GraphOrchestrator` runs agents as nodes in a directed acyclic graph. Each node declares which other nodes it depends on, so independent agents run in parallel while dependent agents wait for their inputs. Use this when the workflow is known up front and you want predictable, ordered execution.
+There are three coordination models, each suited to a different kind of workflow:
+
+| Model | When to use |
+|-------|-------------|
+| **Graph** | The steps are known up front and some can run in parallel |
+| **Swarm** | The routing logic is dynamic -- agents decide at runtime who handles what |
+| **A2A** | Agents live in different processes or services and communicate over HTTP |
+
+---
+
+### Graph -- fixed pipeline with parallel steps
+
+Each agent is a node. You declare which nodes depend on which, and the orchestrator runs independent nodes in parallel while dependent nodes wait. Use this when you know the workflow ahead of time.
+
+**Example:** research and fact-check in parallel, then write using both results.
 
 ```swift
+let researchAgent  = Agent(model: provider, systemPrompt: "You are a research assistant.")
+let factCheckAgent = Agent(model: provider, systemPrompt: "You verify claims for accuracy.")
+let writerAgent    = Agent(model: provider, systemPrompt: "You write clear, concise articles.")
+
 let graph = GraphOrchestrator(nodes: [
-    GraphNode(id: "research", agent: researchAgent),
-    GraphNode(id: "write", agent: writerAgent, dependencies: ["research"]),
+    GraphNode(id: "research",   agent: researchAgent),
+    GraphNode(id: "fact-check", agent: factCheckAgent),
+    // "write" waits for both research and fact-check to finish
+    GraphNode(id: "write", agent: writerAgent, dependencies: ["research", "fact-check"]),
 ])
-let result = try await graph.run("Write about quantum computing")
+
+let result = try await graph.run("Write an article about black holes")
+print(result.output)  // final output from the "write" node
 ```
 
-### Swarm (autonomous handoffs)
+---
 
-`SwarmOrchestrator` lets agents decide at runtime which agent should handle the next step. Execution starts at the entry-point agent; any agent can hand off to another by name based on the task at hand. Use this for open-ended workflows where the routing logic is too dynamic to express as a fixed graph.
+### Swarm -- agents hand off to each other at runtime
+
+Execution starts at an entry-point agent. Any agent can hand off to another by name when it decides it is not the right agent for the current step. Use this when the task is open-ended and you cannot predict the routing in advance.
+
+**Example:** a triage agent routes to a specialist, which routes to a writer.
 
 ```swift
-let swarm = SwarmOrchestrator(members: [
-    SwarmMember(id: "researcher", description: "Gathers information", agent: researchAgent),
-    SwarmMember(id: "writer", description: "Writes articles", agent: writerAgent),
-], entryPoint: "researcher")
-let result = try await swarm.run("Write about quantum computing")
+let triageAgent    = Agent(model: provider, systemPrompt: "Decide which specialist should handle this task. Hand off immediately.")
+let specialistAgent = Agent(model: provider, systemPrompt: "You are a domain expert. Answer in depth, then hand off to the writer.")
+let writerAgent    = Agent(model: provider, systemPrompt: "You turn expert answers into polished prose.")
+
+let swarm = SwarmOrchestrator(
+    members: [
+        SwarmMember(id: "triage",     description: "Routes tasks to the right specialist", agent: triageAgent),
+        SwarmMember(id: "specialist", description: "Answers technical questions",           agent: specialistAgent),
+        SwarmMember(id: "writer",     description: "Writes the final response",             agent: writerAgent),
+    ],
+    entryPoint: "triage"
+)
+
+let result = try await swarm.run("Explain how a compiler turns Swift into machine code")
+print(result.output)
 ```
 
-### A2A (Agent-to-Agent)
+---
 
-A2A lets agents communicate across process or network boundaries using a standard HTTP protocol. Serve any agent as an HTTP endpoint with `A2AServer`, then call it from another agent via `A2AClient` -- which acts as a regular tool from the calling agent's perspective. This enables distributing agents across services or machines without changing how they are defined.
+### A2A -- agents across process or network boundaries
+
+A2A (Agent-to-Agent) lets agents in separate processes or services talk to each other over HTTP. You serve an agent as an endpoint with `A2AServer`; other agents call it via `A2AClient`, which looks like an ordinary tool to the calling agent. Nothing about how you define agents changes.
+
+**Example:** a local agent delegates research to a remote agent running in another service.
 
 ```swift
-// Serve an agent over HTTP
-let server = A2AServer(agent: myAgent, name: "Research Agent", port: 8080)
+// --- In the research service ---
+let researchAgent = Agent(model: provider, systemPrompt: "You are a research assistant.")
+let server = A2AServer(agent: researchAgent, name: "Research Agent", port: 8080)
+try await server.start()
 
-// Call a remote agent as a tool
-let remote = A2AClient(name: "research", description: "Remote researcher",
-                       endpoint: URL(string: "https://research-agent.example.com")!)
-let agent = Agent(model: provider, tools: [remote])
+// --- In the main app ---
+let remoteResearcher = A2AClient(
+    name: "research",
+    description: "Searches and summarizes information",
+    endpoint: URL(string: "http://localhost:8080")!
+)
+
+// The local agent calls the remote agent just like any other tool
+let agent = Agent(model: provider, tools: [remoteResearcher])
+let result = try await agent.run("What were the key findings in the 2024 climate report?")
+print(result.output)
 ```
 
 ## Voice Agents (Bidirectional Streaming)

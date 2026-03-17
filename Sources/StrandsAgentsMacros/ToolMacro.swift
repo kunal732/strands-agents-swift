@@ -194,6 +194,147 @@ extension String {
     }
 }
 
+/// The `@StructuredOutput` macro implementation.
+///
+/// Synthesizes a `jsonSchema` computed property on the annotated struct, generating
+/// the JSON Schema from stored properties automatically.
+///
+/// Input:
+/// ```swift
+/// @StructuredOutput
+/// struct Recipe {
+///     let name: String
+///     let ingredients: [String]
+///     let steps: [String]
+/// }
+/// ```
+///
+/// Generated extension:
+/// ```swift
+/// extension Recipe: StructuredOutput {
+///     public static var jsonSchema: JSONSchema {
+///         [
+///             "type": "object",
+///             "properties": [
+///                 "name": ["type": "string"],
+///                 "ingredients": ["type": "array", "items": ["type": "string"]],
+///                 "steps": ["type": "array", "items": ["type": "string"]],
+///             ],
+///             "required": ["name", "ingredients", "steps"]
+///         ]
+///     }
+/// }
+/// ```
+public struct StructuredOutputMacro: ExtensionMacro {
+    public static func expansion(
+        of node: AttributeSyntax,
+        attachedTo declaration: some DeclGroupSyntax,
+        providingExtensionsOf type: some TypeSyntaxProtocol,
+        conformingTo protocols: [TypeSyntax],
+        in context: some MacroExpansionContext
+    ) throws -> [ExtensionDeclSyntax] {
+        guard let structDecl = declaration.as(StructDeclSyntax.self) else {
+            throw MacroError("@StructuredOutput can only be applied to structs")
+        }
+
+        let typeName = structDecl.name.text
+
+        // Collect stored properties (skip computed ones with accessor blocks)
+        var properties: [(name: String, schema: String, isOptional: Bool)] = []
+
+        for member in structDecl.memberBlock.members {
+            guard let varDecl = member.decl.as(VariableDeclSyntax.self) else { continue }
+            for binding in varDecl.bindings {
+                guard binding.accessorBlock == nil else { continue }
+                guard let pattern = binding.pattern.as(IdentifierPatternSyntax.self) else { continue }
+                let name = pattern.identifier.text
+                guard let typeAnnotation = binding.typeAnnotation else { continue }
+                let typeText = typeAnnotation.type.trimmedDescription
+                let (schema, isOptional) = schemaEntry(for: typeText)
+                properties.append((name: name, schema: schema, isOptional: isOptional))
+            }
+        }
+
+        // Build "properties" dict entries
+        let propertiesEntries = properties
+            .map { "\"\($0.name)\": \($0.schema)" }
+            .joined(separator: ",\n                ")
+
+        // Build "required" array (non-optional properties only)
+        let requiredNames = properties.filter { !$0.isOptional }.map { "\"\($0.name)\"" }
+        let requiredStr: String
+        if requiredNames.isEmpty {
+            requiredStr = ""
+        } else {
+            requiredStr = ",\n            \"required\": [\(requiredNames.joined(separator: ", "))]"
+        }
+
+        let decl: DeclSyntax = """
+        extension \(raw: typeName): StructuredOutput {
+            public static var jsonSchema: JSONSchema {
+                [
+                    "type": "object",
+                    "properties": [
+                        \(raw: propertiesEntries)
+                    ]\(raw: requiredStr)
+                ]
+            }
+        }
+        """
+
+        guard let extensionDecl = decl.as(ExtensionDeclSyntax.self) else {
+            throw MacroError("@StructuredOutput: failed to build extension declaration")
+        }
+
+        return [extensionDecl]
+    }
+
+    /// Returns the JSON schema literal string and whether the type is optional.
+    private static func schemaEntry(for type: String) -> (schema: String, isOptional: Bool) {
+        let trimmed = type.trimmingCharacters(in: .whitespaces)
+
+        // Optional<T> or T?
+        if trimmed.hasSuffix("?") {
+            let (schema, _) = schemaEntry(for: String(trimmed.dropLast()))
+            return (schema, true)
+        }
+        if trimmed.hasPrefix("Optional<") && trimmed.hasSuffix(">") {
+            let inner = String(trimmed.dropFirst("Optional<".count).dropLast())
+            let (schema, _) = schemaEntry(for: inner)
+            return (schema, true)
+        }
+
+        // [T]
+        if trimmed.hasPrefix("[") && trimmed.hasSuffix("]") {
+            let inner = String(trimmed.dropFirst().dropLast())
+            let (itemSchema, _) = schemaEntry(for: inner)
+            return (#"["type": "array", "items": \#(itemSchema)]"#, false)
+        }
+
+        // Array<T>
+        if trimmed.hasPrefix("Array<") && trimmed.hasSuffix(">") {
+            let inner = String(trimmed.dropFirst("Array<".count).dropLast())
+            let (itemSchema, _) = schemaEntry(for: inner)
+            return (#"["type": "array", "items": \#(itemSchema)]"#, false)
+        }
+
+        // Primitive types
+        switch trimmed {
+        case "String":
+            return (#"["type": "string"]"#, false)
+        case "Int", "Int8", "Int16", "Int32", "Int64",
+             "UInt", "UInt8", "UInt16", "UInt32", "UInt64":
+            return (#"["type": "integer"]"#, false)
+        case "Double", "Float", "Float32", "Float64":
+            return (#"["type": "number"]"#, false)
+        case "Bool":
+            return (#"["type": "boolean"]"#, false)
+        default:
+            return (#"["type": "object"]"#, false)
+        }
+    }
+}
+
 struct MacroError: Error, CustomStringConvertible {
     let description: String
     init(_ description: String) { self.description = description }
@@ -203,5 +344,6 @@ struct MacroError: Error, CustomStringConvertible {
 struct StrandsAgentsMacroPlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
         ToolMacro.self,
+        StructuredOutputMacro.self,
     ]
 }

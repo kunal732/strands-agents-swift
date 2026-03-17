@@ -104,3 +104,74 @@ final class SendableBox: @unchecked Sendable {
     engine.recordEvent(name: "test", attributes: [:], spanContext: nil)
     engine.recordMetric(name: "test", value: 1.0, unit: nil, attributes: [:])
 }
+
+// MARK: - @StructuredOutput macro tests
+
+@StructuredOutput
+struct MacroRecipe {
+    let name: String
+    let ingredients: [String]
+    let servings: Int
+    let rating: Double
+    let isVegetarian: Bool
+    let note: String?   // optional -- should be absent from "required"
+}
+
+@Test func structuredOutputMacroGeneratesSchema() {
+    let schema = MacroRecipe.jsonSchema
+
+    // Top-level type
+    #expect(schema["type"] == "object")
+
+    // Properties dict is present
+    guard case .object(let props) = schema["properties"] else {
+        Issue.record("Expected 'properties' to be an object")
+        return
+    }
+
+    // Each stored property has a schema entry
+    #expect(props["name"] != nil)
+    #expect(props["ingredients"] != nil)
+    #expect(props["servings"] != nil)
+    #expect(props["rating"] != nil)
+    #expect(props["isVegetarian"] != nil)
+    #expect(props["note"] != nil)
+
+    // Primitive type mappings
+    #expect(props["name"] == ["type": "string"])
+    #expect(props["servings"] == ["type": "integer"])
+    #expect(props["rating"] == ["type": "number"])
+    #expect(props["isVegetarian"] == ["type": "boolean"])
+
+    // Array type mapping
+    #expect(props["ingredients"] == ["type": "array", "items": ["type": "string"]])
+
+    // Optional property has correct schema
+    #expect(props["note"] == ["type": "string"])
+}
+
+@Test func structuredOutputMacroRequired() {
+    let schema = MacroRecipe.jsonSchema
+
+    guard case .array(let required) = schema["required"] else {
+        Issue.record("Expected 'required' to be an array")
+        return
+    }
+
+    let requiredNames = required.compactMap { if case .string(let s) = $0 { return s } else { return nil } }
+
+    // Non-optional properties are required
+    #expect(requiredNames.contains("name"))
+    #expect(requiredNames.contains("ingredients"))
+    #expect(requiredNames.contains("servings"))
+    #expect(requiredNames.contains("rating"))
+    #expect(requiredNames.contains("isVegetarian"))
+
+    // Optional property is NOT required
+    #expect(!requiredNames.contains("note"))
+}
+
+@Test func structuredOutputMacroConformsToProtocol() {
+    // Verify the struct can be used wherever StructuredOutput is expected
+    let _: any StructuredOutput.Type = MacroRecipe.self
+}

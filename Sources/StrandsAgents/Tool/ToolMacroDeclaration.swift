@@ -28,3 +28,34 @@
 /// The doc comment becomes the tool description.
 @attached(peer, names: arbitrary)
 public macro Tool() = #externalMacro(module: "StrandsAgentsMacros", type: "ToolMacro")
+
+/// Synthesizes `StructuredOutput` conformance for a struct.
+///
+/// Automatically generates a `jsonSchema` computed property from the struct's
+/// stored properties, eliminating hand-written JSON schema boilerplate.
+///
+/// ```swift
+/// @StructuredOutput
+/// struct Recipe {
+///     let name: String
+///     let ingredients: [String]
+///     let steps: [String]
+///     let note: String?   // optional -- omitted from "required"
+/// }
+///
+/// // Struct now conforms to StructuredOutput without any manual jsonSchema:
+/// let recipe: Recipe = try await agent.runStructured("Give me a pasta recipe")
+/// ```
+///
+/// Supported type mappings:
+/// - `String` -> `"string"`
+/// - `Int` / integer variants -> `"integer"`
+/// - `Double` / `Float` -> `"number"`
+/// - `Bool` -> `"boolean"`
+/// - `[T]` / `Array<T>` -> `"array"` with nested item schema
+/// - `T?` / `Optional<T>` -> same schema as `T`, omitted from `"required"`
+///
+/// The attribute name `@StructuredOutput` coexists with the `StructuredOutput`
+/// protocol -- the same pattern SwiftData uses with `@Model`/`Model`.
+@attached(extension, conformances: StructuredOutput, names: named(jsonSchema))
+public macro StructuredOutput() = #externalMacro(module: "StrandsAgentsMacros", type: "StructuredOutputMacro")
