@@ -4,8 +4,8 @@ import AWSBedrockRuntime
 
 /// AWS Nova Sonic bidi model via Bedrock's `InvokeModelWithBidirectionalStream` API.
 ///
-/// Nova Sonic supports real-time voice conversations with tool calling.
-/// Has an 8-minute connection limit -- the BidiAgent automatically reconnects.
+/// Supports real-time voice conversations with tool calling.
+/// 8-minute connection limit -- BidiAgent auto-reconnects.
 ///
 /// ```swift
 /// let model = try NovaSonicModel(region: "us-east-1")
@@ -15,15 +15,10 @@ import AWSBedrockRuntime
 public final class NovaSonicModel: BidiModel, @unchecked Sendable {
     public var modelId: String? { model }
     public var config: [String: Any] {
-        [
-            "audio": [
-                "input_rate": 16000,
-                "output_rate": 16000,
-                "channels": 1,
-                "format": "pcm16",
-                "voice": voice,
-            ] as [String: Any],
-        ]
+        ["audio": [
+            "input_rate": 16000, "output_rate": 16000,
+            "channels": 1, "format": "pcm16", "voice": voice,
+        ] as [String: Any]]
     }
 
     private let model: String
@@ -34,9 +29,9 @@ public final class NovaSonicModel: BidiModel, @unchecked Sendable {
 
     private var inputContinuation: AsyncThrowingStream<BedrockRuntimeClientTypes.InvokeModelWithBidirectionalStreamInput, Error>.Continuation?
     private var outputBody: AsyncThrowingStream<BedrockRuntimeClientTypes.InvokeModelWithBidirectionalStreamOutput, Error>?
-    private var sessionId: String = ""
-    private var promptId: String = ""
-    private var contentId: String = ""
+    private var connectionId: String = ""
+    private var audioContentName: String? = nil
+    private let sendLock = NSLock()
 
     public init(
         model: String = "amazon.nova-sonic-v1:0",
@@ -48,66 +43,98 @@ public final class NovaSonicModel: BidiModel, @unchecked Sendable {
         self.region = region
         self.voice = voice
         self.connectionTimeout = connectionTimeout
-
-        let clientConfig = try BedrockRuntimeClient.BedrockRuntimeClientConfiguration(region: region)
-        self.client = BedrockRuntimeClient(config: clientConfig)
+        self.client = BedrockRuntimeClient(config: try .init(region: region))
     }
 
-    public func start(systemPrompt: String?, tools: [ToolSpec], messages: [Message]) async throws {
-        sessionId = UUID().uuidString
-        promptId = UUID().uuidString
-        contentId = UUID().uuidString
+    // MARK: - BidiModel
 
-        // Create the bidirectional input stream
+    public func start(systemPrompt: String?, tools: [ToolSpec], messages: [Message]) async throws {
+        connectionId = UUID().uuidString
+        audioContentName = nil
+
         let (inputStream, continuation) = AsyncThrowingStream<BedrockRuntimeClientTypes.InvokeModelWithBidirectionalStreamInput, Error>.makeStream()
         self.inputContinuation = continuation
 
-        // Call Bedrock's bidirectional stream API
         let output = try await client.invokeModelWithBidirectionalStream(
-            input: InvokeModelWithBidirectionalStreamInput(
-                body: inputStream,
-                modelId: model
-            )
+            input: InvokeModelWithBidirectionalStreamInput(body: inputStream, modelId: model)
         )
         self.outputBody = output.body
 
-        // Send session start
-        try await sendEvent(NovaSonicEvent.sessionStart(sessionId: sessionId))
+        // Session start
+        try await sendJSON([
+            "event": ["sessionStart": [
+                "inferenceConfiguration": [
+                    "maxTokens": 1024, "topP": 0.9, "temperature": 0.7,
+                ],
+            ]],
+        ])
 
-        // Send prompt start with config
-        try await sendEvent(NovaSonicEvent.promptStart(
-            promptId: promptId,
-            systemPrompt: systemPrompt,
-            tools: tools,
-            voice: voice
-        ))
+        // Prompt start
+        var promptStart: [String: Any] = [
+            "promptName": connectionId,
+            "textOutputConfiguration": ["mediaType": "text/plain"],
+            "audioOutputConfiguration": [
+                "mediaType": "audio/lpcm",
+                "sampleRateHertz": 16000, "sampleSizeBits": 16,
+                "channelCount": 1, "voiceId": voice,
+                "encoding": "base64", "audioType": "SPEECH",
+            ] as [String: Any],
+        ]
 
-        // Restore conversation history
-        for message in messages {
-            let text = message.textContent
-            if !text.isEmpty {
-                let role = message.role == .user ? "USER" : "ASSISTANT"
-                try await sendEvent(NovaSonicEvent.textContent(
-                    contentId: UUID().uuidString,
-                    promptId: promptId,
-                    role: role,
-                    text: text
-                ))
-            }
+        if let sys = systemPrompt {
+            // System prompt as a text content block before the prompt
+            promptStart["systemPrompt"] = sys
         }
 
-        // Start audio content stream
-        try await sendEvent(NovaSonicEvent.audioContentStart(
-            contentId: contentId,
-            promptId: promptId
-        ))
+        if !tools.isEmpty {
+            promptStart["toolConfiguration"] = ["tools": tools.map { spec in
+                [
+                    "toolSpec": [
+                        "name": spec.name,
+                        "description": spec.description,
+                        "inputSchema": ["json": jsonToString(JSONValue.object(spec.inputSchema))],
+                    ],
+                ] as [String: Any]
+            }]
+            promptStart["toolUseOutputConfiguration"] = ["mediaType": "text/plain"]
+        }
+
+        try await sendJSON(["event": ["promptStart": promptStart]])
+
+        // Restore conversation history as text content blocks
+        for message in messages {
+            let text = message.textContent
+            guard !text.isEmpty else { continue }
+            let role = message.role == .user ? "USER" : "ASSISTANT"
+            let contentName = UUID().uuidString
+
+            try await sendJSON(["event": ["contentStart": [
+                "promptName": connectionId,
+                "contentName": contentName,
+                "type": "TEXT",
+                "role": role,
+            ]]])
+            try await sendJSON(["event": ["textInput": [
+                "promptName": connectionId,
+                "contentName": contentName,
+                "content": text,
+            ]]])
+            try await sendJSON(["event": ["contentEnd": [
+                "promptName": connectionId,
+                "contentName": contentName,
+            ]]])
+        }
+
+        // Start audio input connection
+        await startAudioConnection()
     }
 
     public func stop() async {
-        try? await sendEvent(NovaSonicEvent.audioContentEnd(contentId: contentId, promptId: promptId))
-        try? await sendEvent(NovaSonicEvent.promptEnd(promptId: promptId))
-        try? await sendEvent(NovaSonicEvent.sessionEnd(sessionId: sessionId))
-
+        await endAudioInput()
+        try? await sendJSON(["event": ["contentEnd": [
+            "promptName": connectionId,
+            "contentName": connectionId,
+        ]]])
         inputContinuation?.finish()
         inputContinuation = nil
         outputBody = nil
@@ -116,24 +143,43 @@ public final class NovaSonicModel: BidiModel, @unchecked Sendable {
     public func send(_ event: BidiInputEvent) async throws {
         switch event {
         case .audio(let data, _):
-            try await sendEvent(NovaSonicEvent.audioChunk(
-                contentId: contentId, promptId: promptId, audioData: data
-            ))
+            if audioContentName == nil {
+                await startAudioConnection()
+            }
+            guard let name = audioContentName else { return }
+            try await sendJSON(["event": ["audioInput": [
+                "promptName": connectionId,
+                "contentName": name,
+                "content": data.base64EncodedString(),
+            ]]])
 
         case .text(let text):
-            let textId = UUID().uuidString
-            try await sendEvent(NovaSonicEvent.textContent(
-                contentId: textId, promptId: promptId, role: "USER", text: text
-            ))
+            await endAudioInput()
+            let contentName = UUID().uuidString
+            try await sendJSON(["event": ["contentStart": [
+                "promptName": connectionId,
+                "contentName": contentName,
+                "type": "TEXT",
+                "role": "USER",
+            ]]])
+            try await sendJSON(["event": ["textInput": [
+                "promptName": connectionId,
+                "contentName": contentName,
+                "content": text,
+            ]]])
+            try await sendJSON(["event": ["contentEnd": [
+                "promptName": connectionId,
+                "contentName": contentName,
+            ]]])
 
         case .interrupt:
             break
 
         case .end:
-            try await sendEvent(NovaSonicEvent.audioContentEnd(
-                contentId: contentId, promptId: promptId
-            ))
-            try await sendEvent(NovaSonicEvent.promptEnd(promptId: promptId))
+            await endAudioInput()
+            try await sendJSON(["event": ["promptEnd": [
+                "promptName": connectionId,
+            ]]])
 
         case .sessionUpdate, .image:
             break
@@ -145,12 +191,24 @@ public final class NovaSonicModel: BidiModel, @unchecked Sendable {
             if case .text(let t) = c { return t }
             return nil
         }.joined()
+        let contentName = UUID().uuidString
 
-        try await sendEvent(NovaSonicEvent.toolResult(
-            contentId: UUID().uuidString, promptId: promptId,
-            toolUseId: result.toolUseId, content: content,
-            status: result.status == .success ? "success" : "error"
-        ))
+        try await sendJSON(["event": ["contentStart": [
+            "promptName": connectionId,
+            "contentName": contentName,
+            "type": "TOOL_RESULT",
+            "role": "TOOL",
+            "toolResultInputConfiguration": ["toolUseId": result.toolUseId, "type": "TEXT"],
+        ]]])
+        try await sendJSON(["event": ["textInput": [
+            "promptName": connectionId,
+            "contentName": contentName,
+            "content": content,
+        ]]])
+        try await sendJSON(["event": ["contentEnd": [
+            "promptName": connectionId,
+            "contentName": contentName,
+        ]]])
     }
 
     public func receive() -> AsyncThrowingStream<BidiOutputEvent, Error> {
@@ -160,14 +218,10 @@ public final class NovaSonicModel: BidiModel, @unchecked Sendable {
 
         return AsyncThrowingStream { continuation in
             Task { [weak self] in
-                guard let self else {
-                    continuation.finish()
-                    return
-                }
+                guard let self else { continuation.finish(); return }
 
-                continuation.yield(.connectionStarted(connectionId: self.sessionId))
+                continuation.yield(.connectionStarted(connectionId: self.connectionId))
 
-                // Set up timeout detection
                 let timeoutTask = Task {
                     try await Task.sleep(for: .seconds(self.connectionTimeout))
                     continuation.finish(throwing: BidiModelTimeoutError())
@@ -176,12 +230,10 @@ public final class NovaSonicModel: BidiModel, @unchecked Sendable {
                 do {
                     for try await event in body {
                         guard case .chunk(let part) = event,
-                              let bytes = part.bytes,
-                              !bytes.isEmpty
+                              let bytes = part.bytes, !bytes.isEmpty
                         else { continue }
 
-                        // Parse the JSON event from the output bytes
-                        self.parseAndYield(data: bytes, continuation: continuation)
+                        self.parseOutputEvent(bytes, continuation: continuation)
                     }
                     timeoutTask.cancel()
                     continuation.yield(.sessionEnded(reason: .complete))
@@ -200,10 +252,38 @@ public final class NovaSonicModel: BidiModel, @unchecked Sendable {
         }
     }
 
-    // MARK: - Event Parsing
+    // MARK: - Audio Connection
 
-    func parseAndYield(
-        data: Data,
+    private func startAudioConnection() async {
+        let name = UUID().uuidString
+        audioContentName = name
+
+        try? await sendJSON(["event": ["contentStart": [
+            "promptName": connectionId,
+            "contentName": name,
+            "type": "AUDIO",
+            "interactive": true,
+            "role": "USER",
+            "audioInputConfiguration": [
+                "mediaType": "audio/lpcm",
+                "sampleRateHertz": 16000, "sampleSizeBits": 16,
+                "channelCount": 1, "audioType": "SPEECH", "encoding": "base64",
+            ] as [String: Any],
+        ]]])
+    }
+
+    private func endAudioInput() async {
+        guard let name = audioContentName else { return }
+        try? await sendJSON(["event": ["contentEnd": [
+            "promptName": connectionId, "contentName": name,
+        ]]])
+        audioContentName = nil
+    }
+
+    // MARK: - Output Parsing
+
+    private func parseOutputEvent(
+        _ data: Data,
         continuation: AsyncThrowingStream<BidiOutputEvent, Error>.Continuation
     ) {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -222,30 +302,32 @@ public final class NovaSonicModel: BidiModel, @unchecked Sendable {
            let content = textOutput["content"] as? String {
             let role: Role = (textOutput["role"] as? String) == "USER" ? .user : .assistant
             continuation.yield(.transcript(role: role, text: content, isFinal: true))
-
             if role == .assistant {
                 continuation.yield(.textDelta(content))
             }
         }
 
-        // Tool use request
+        // Tool use
         if let toolUse = event["toolUse"] as? [String: Any],
            let toolName = toolUse["toolName"] as? String,
            let toolUseId = toolUse["toolUseId"] as? String {
             let inputStr = toolUse["content"] as? String ?? "{}"
             let input: JSONValue
-            if let inputData = inputStr.data(using: .utf8),
-               let decoded = try? JSONDecoder().decode(JSONValue.self, from: inputData) {
+            if let d = inputStr.data(using: .utf8), let decoded = try? JSONDecoder().decode(JSONValue.self, from: d) {
                 input = decoded
             } else {
                 input = .object([:])
             }
-            continuation.yield(.toolCall(ToolUseBlock(
-                toolUseId: toolUseId, name: toolName, input: input
-            )))
+            continuation.yield(.toolCall(ToolUseBlock(toolUseId: toolUseId, name: toolName, input: input)))
         }
 
-        // Content end (completion or interruption)
+        // Content start (audio response starting)
+        if let contentStart = event["contentStart"] as? [String: Any],
+           let type = contentStart["type"] as? String, type == "AUDIO" {
+            continuation.yield(.responseStarted(responseId: UUID().uuidString))
+        }
+
+        // Content end
         if let contentEnd = event["contentEnd"] as? [String: Any] {
             let stopReason = contentEnd["stopReason"] as? String
             if stopReason == "INTERRUPTED" {
@@ -254,7 +336,7 @@ public final class NovaSonicModel: BidiModel, @unchecked Sendable {
             continuation.yield(.responseDone(responseId: UUID().uuidString))
         }
 
-        // Usage metrics
+        // Usage
         if let usage = event["usage"] as? [String: Any] {
             continuation.yield(.usage(Usage(
                 inputTokens: usage["inputTokens"] as? Int ?? 0,
@@ -264,142 +346,19 @@ public final class NovaSonicModel: BidiModel, @unchecked Sendable {
         }
     }
 
-    // MARK: - Private
+    // MARK: - Helpers
 
-    private func sendEvent(_ event: NovaSonicEvent) async throws {
-        let data = try event.serialize()
+    private func sendJSON(_ obj: [String: Any]) async throws {
+        let data = try JSONSerialization.data(withJSONObject: obj)
         inputContinuation?.yield(.chunk(
             BedrockRuntimeClientTypes.BidirectionalInputPayloadPart(bytes: data)
         ))
     }
-}
 
-// MARK: - Nova Sonic Event Serialization
-
-enum NovaSonicEvent {
-    case sessionStart(sessionId: String)
-    case sessionEnd(sessionId: String)
-    case promptStart(promptId: String, systemPrompt: String?, tools: [ToolSpec], voice: String = "tiffany")
-    case promptEnd(promptId: String)
-    case audioContentStart(contentId: String, promptId: String)
-    case audioContentEnd(contentId: String, promptId: String)
-    case audioChunk(contentId: String, promptId: String, audioData: Data)
-    case textContent(contentId: String, promptId: String, role: String, text: String)
-    case toolResult(contentId: String, promptId: String, toolUseId: String, content: String, status: String)
-
-    func serialize() throws -> Data {
-        let event: [String: Any]
-
-        switch self {
-        case .sessionStart(let sessionId):
-            event = [
-                "event": [
-                    "sessionStart": [
-                        "inferenceConfiguration": [
-                            "maxTokens": 1024,
-                            "topP": 0.9,
-                            "temperature": 0.7,
-                        ],
-                    ],
-                ] as [String: Any],
-                "sessionId": sessionId,
-            ]
-
-        case .sessionEnd(let sessionId):
-            event = ["event": ["sessionEnd": [:] as [String: Any]], "sessionId": sessionId]
-
-        case .promptStart(let promptId, let systemPrompt, let tools, let voice):
-            var audioOut: [String: Any] = [
-                "mediaType": "audio/lpcm",
-                "sampleRateHertz": 16000,
-                "sampleSizeBits": 16,
-                "channelCount": 1,
-            ]
-            audioOut["voiceId"] = voice
-
-            var promptConfig: [String: Any] = [
-                "audioInputConfiguration": [
-                    "mediaType": "audio/lpcm",
-                    "sampleRateHertz": 16000,
-                    "sampleSizeBits": 16,
-                    "channelCount": 1,
-                ],
-                "audioOutputConfiguration": audioOut,
-                "textInputConfiguration": ["mediaType": "text/plain"],
-            ]
-
-            if let sys = systemPrompt {
-                promptConfig["systemPrompt"] = sys
-            }
-
-            if !tools.isEmpty {
-                promptConfig["toolConfiguration"] = [
-                    "tools": tools.map { spec in
-                        [
-                            "toolSpec": [
-                                "name": spec.name,
-                                "description": spec.description,
-                                "inputSchema": ["json": "{\"type\":\"object\"}"],
-                            ],
-                        ]
-                    },
-                ]
-            }
-
-            event = ["event": [
-                "promptStart": [
-                    "promptId": promptId,
-                    "inferenceConfiguration": promptConfig,
-                ],
-            ]]
-
-        case .promptEnd(let promptId):
-            event = ["event": ["promptEnd": ["promptId": promptId]]]
-
-        case .audioContentStart(let contentId, let promptId):
-            event = ["event": [
-                "contentStart": [
-                    "contentId": contentId,
-                    "promptId": promptId,
-                    "type": "AUDIO",
-                    "interactive": true,
-                ],
-            ]]
-
-        case .audioContentEnd(let contentId, let promptId):
-            event = ["event": ["contentEnd": ["contentId": contentId, "promptId": promptId]]]
-
-        case .audioChunk(let contentId, let promptId, let audioData):
-            event = ["event": [
-                "audioInput": [
-                    "contentId": contentId,
-                    "promptId": promptId,
-                    "audio": audioData.base64EncodedString(),
-                ],
-            ]]
-
-        case .textContent(let contentId, let promptId, let role, let text):
-            event = ["event": [
-                "textInput": [
-                    "contentId": contentId,
-                    "promptId": promptId,
-                    "role": role,
-                    "content": text,
-                ],
-            ]]
-
-        case .toolResult(let contentId, let promptId, let toolUseId, let content, let status):
-            event = ["event": [
-                "toolResult": [
-                    "contentId": contentId,
-                    "promptId": promptId,
-                    "toolUseId": toolUseId,
-                    "content": content,
-                    "status": status,
-                ],
-            ]]
-        }
-
-        return try JSONSerialization.data(withJSONObject: event)
+    private func jsonToString(_ value: JSONValue) -> String {
+        guard let data = try? JSONEncoder().encode(value),
+              let str = String(data: data, encoding: .utf8)
+        else { return "{}" }
+        return str
     }
 }

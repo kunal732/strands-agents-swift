@@ -1,6 +1,7 @@
 // swift-tools-version: 6.0
 
 import PackageDescription
+import CompilerPluginSupport
 
 let package = Package(
     name: "strands-agents-swift",
@@ -26,12 +27,26 @@ let package = Package(
         .package(url: "https://github.com/open-telemetry/opentelemetry-swift.git", .upToNextMajor(from: "1.0.0")),
         .package(url: "https://github.com/ml-explore/mlx-swift.git", .upToNextMajor(from: "0.30.6")),
         .package(url: "https://github.com/Blaizzy/mlx-audio-swift.git", branch: "main"),
+        .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "600.0.0"),
     ],
     targets: [
         // Core
         .target(
             name: "StrandsAgents",
+            dependencies: ["StrandsAgentsMacros"],
             path: "Sources/StrandsAgents"
+        ),
+
+        // Macro implementation (compiler plugin)
+        .macro(
+            name: "StrandsAgentsMacros",
+            dependencies: [
+                .product(name: "SwiftSyntax", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
+                .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxBuilder", package: "swift-syntax"),
+            ],
+            path: "Sources/StrandsAgentsMacros"
         ),
 
         // Model Providers
@@ -115,6 +130,11 @@ let package = Package(
             name: "BedrockInferenceExample",
             dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
             path: "Examples/BedrockInference"
+        ),
+        .executableTarget(
+            name: "MenuBarAgent",
+            dependencies: ["StrandsAgents", "StrandsMLXProvider", "StrandsBedrockProvider", "StrandsBidiStreaming"],
+            path: "Examples/MenuBarAgent"
         ),
 
         // Tests

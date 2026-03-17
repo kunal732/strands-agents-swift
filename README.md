@@ -99,34 +99,26 @@ let agent = Agent(
 ## Tools
 
 ```swift
-// Closure-based tool
-let calculator = FunctionTool(
-    name: "calculator",
-    description: "Evaluate a math expression",
-    inputSchema: ToolSchemaBuilder.build {
-        StringProperty("expression", description: "The math expression").required()
-    }
-) { input, context in
-    let expr = input["expression"]?.foundationValue as? String ?? "0"
-    return "Result: \(NSExpression(format: expr).expressionValue(with: nil, context: nil) ?? "error")"
+/// Get the current weather for a city
+@Tool
+func getWeather(city: String, unit: String = "fahrenheit") async throws -> String {
+    // fetch weather...
+    return "72F, sunny in \(city)"
 }
 
-// Protocol-based tool
-struct WeatherTool: AgentTool {
-    let name = "get_weather"
-    var toolSpec: ToolSpec { ... }
-    func call(toolUse: ToolUseBlock, context: ToolContext) async throws -> ToolResultBlock { ... }
+/// Evaluate a math expression
+@Tool
+func calculator(expression: String) -> String {
+    let result = NSExpression(format: expression).expressionValue(with: nil, context: nil)
+    return "\(result ?? "error")"
 }
 
-// Direct tool calling (bypasses model)
-let result = try await agent.callTool("calculator", input: ["expression": "42 * 17"])
-
-// MCP server tools
-let mcp = MCPToolProvider(command: "npx", arguments: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"])
-try await agent.toolRegistry.loadFrom(mcp)
+let agent = Agent(model: provider, tools: [getWeather, calculator])
 ```
 
-Tools requested in the same turn run concurrently by default. Set `parallelToolExecution: false` for sequential execution.
+The `@Tool` macro generates the tool name, JSON schema, and `AgentTool` conformance from the function signature. Parameter types map to JSON schema types. Default values make parameters optional. The doc comment becomes the tool description.
+
+Tools requested in the same turn run concurrently by default.
 
 ## Structured Output
 
