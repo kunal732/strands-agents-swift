@@ -35,11 +35,26 @@ Add the modules you need:
 import StrandsAgents
 import StrandsBedrockProvider
 
-/// Get the current weather for a city
+/// Fetch current weather from Open-Meteo (free, no API key)
 @Tool
 func getWeather(city: String) async throws -> String {
-    // fetch weather...
-    return "72F, sunny in \(city)"
+    let geocodeURL = URL(string: "https://geocoding-api.open-meteo.com/v1/search?name=\(city)&count=1")!
+    let (geoData, _) = try await URLSession.shared.data(from: geocodeURL)
+    let geo = try JSONSerialization.jsonObject(with: geoData) as? [String: Any]
+    let results = geo?["results"] as? [[String: Any]]
+    guard let lat = results?.first?["latitude"] as? Double,
+          let lon = results?.first?["longitude"] as? Double else {
+        return "Could not find \(city)"
+    }
+
+    let weatherURL = URL(string: "https://api.open-meteo.com/v1/forecast?latitude=\(lat)&longitude=\(lon)&current=temperature_2m,wind_speed_10m&temperature_unit=fahrenheit")!
+    let (wxData, _) = try await URLSession.shared.data(from: weatherURL)
+    let wx = try JSONSerialization.jsonObject(with: wxData) as? [String: Any]
+    let current = wx?["current"] as? [String: Any]
+    let temp = current?["temperature_2m"] as? Double ?? 0
+    let wind = current?["wind_speed_10m"] as? Double ?? 0
+
+    return "\(city): \(temp)F, wind \(wind) mph"
 }
 
 let agent = Agent(
@@ -56,11 +71,18 @@ print(result)
 
 ### Streaming
 
+`agent.stream()` returns tokens as they generate, so you can display the response in real time:
+
 ```swift
-for try await event in agent.stream("Tell me a story") {
+for try await event in agent.stream("What's the weather in Tokyo?") {
     switch event {
-    case .textDelta(let text): print(text, terminator: "")
-    case .toolResult(let result): print("\n[Tool: \(result.status)]")
+    case .textDelta(let text):
+        // Prints each token as it arrives (like a typing effect)
+        print(text, terminator: "")
+    case .toolResult(let result):
+        print("\n[Tool returned: \(result.status)]")
+    case .result(let final):
+        print("\n\(final.metrics.totalLatencyMs)ms, \(final.usage.outputTokens) tokens")
     default: break
     }
 }
@@ -105,15 +127,9 @@ let agent = Agent(
 
 ## Tools
 
-Define tools as annotated functions. The `@Tool` macro generates the tool name, JSON schema, and `AgentTool` conformance from the function signature. Parameter types map to JSON schema types. Default values make parameters optional. The doc comment becomes the tool description.
+Define tools as annotated functions. The `@Tool` macro generates the tool name, JSON schema, and `AgentTool` conformance from the function signature. Parameter types map to schema types (`String` -> `"string"`, `Int` -> `"integer"`, `Double` -> `"number"`, `Bool` -> `"boolean"`). Default values make parameters optional. The doc comment becomes the tool description.
 
 ```swift
-/// Get the current weather for a city
-@Tool
-func getWeather(city: String, unit: String = "fahrenheit") async throws -> String {
-    return "72F, sunny in \(city)"
-}
-
 /// Evaluate a math expression
 @Tool
 func calculator(expression: String) -> String {
@@ -130,10 +146,11 @@ func getTime() -> String {
 let agent = Agent(model: provider, tools: [getWeather, calculator, getTime])
 ```
 
-Tools can also be called directly as regular Swift functions:
+`@Tool` functions are still regular functions -- you can call them directly:
 
 ```swift
 let weather = try await getWeather(city: "Tokyo")
+let time = getTime()
 ```
 
 Tools requested in the same turn run concurrently by default.
