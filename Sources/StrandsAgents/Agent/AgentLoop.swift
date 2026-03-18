@@ -15,6 +15,7 @@ struct AgentLoop: Sendable {
     let maxCycles: Int
     let parallelToolExecution: Bool
     let agentState: AgentState?
+    let routingHints: RoutingHints
 
     init(
         router: any ModelRouter,
@@ -25,7 +26,8 @@ struct AgentLoop: Sendable {
         retryStrategy: RetryStrategy,
         maxCycles: Int,
         parallelToolExecution: Bool = true,
-        agentState: AgentState? = nil
+        agentState: AgentState? = nil,
+        routingHints: RoutingHints = RoutingHints()
     ) {
         self.router = router
         self.toolRegistry = toolRegistry
@@ -36,6 +38,7 @@ struct AgentLoop: Sendable {
         self.maxCycles = maxCycles
         self.parallelToolExecution = parallelToolExecution
         self.agentState = agentState
+        self.routingHints = routingHints
     }
 
     /// Execute the agent loop, returning the final result with detailed metrics.
@@ -58,17 +61,20 @@ struct AgentLoop: Sendable {
         )
         defer { observability.endSpan(invocationSpan, status: .ok) }
 
+        var lastModelLatencyMs: Int? = nil
+
         while cycleCount < maxCycles {
             cycleCount += 1
-            let cycleStart = Date()
 
             let (aggregated, cycleSpan, modelLatencyMs, timeToFirstTokenMs, modelId) = try await runModelCycleWithMetrics(
                 messages: messages,
                 systemPrompt: systemPrompt,
                 toolChoice: toolChoice,
                 cycleCount: cycleCount,
-                parentSpanId: invocationSpan.id
+                parentSpanId: invocationSpan.id,
+                lastInferenceLatencyMs: lastModelLatencyMs
             )
+            lastModelLatencyMs = modelLatencyMs
 
             accumulateUsage(&totalUsage, from: aggregated.usage)
 
@@ -208,6 +214,8 @@ struct AgentLoop: Sendable {
         )
         defer { observability.endSpan(invocationSpan, status: .ok) }
 
+        var lastModelLatencyMs: Int? = nil
+
         while cycleCount < maxCycles {
             cycleCount += 1
 
@@ -217,8 +225,10 @@ struct AgentLoop: Sendable {
                 toolChoice: toolChoice,
                 cycleCount: cycleCount,
                 parentSpanId: invocationSpan.id,
+                lastInferenceLatencyMs: lastModelLatencyMs,
                 yield: yield
             )
+            lastModelLatencyMs = modelLatencyMs
 
             accumulateUsage(&totalUsage, from: aggregated.usage)
 
@@ -325,7 +335,7 @@ struct AgentLoop: Sendable {
 
     private func runModelCycleWithMetrics(
         messages: [Message], systemPrompt: String?, toolChoice: ToolChoice?, cycleCount: Int,
-        parentSpanId: String
+        parentSpanId: String, lastInferenceLatencyMs: Int? = nil
     ) async throws -> (StreamAggregator.AggregatedResult, SpanContext, Int, Int?, String?) {
         let cycleSpan = observability.startChildSpan(
             name: GenAISpanNames.eventLoopCycle,
@@ -338,7 +348,7 @@ struct AgentLoop: Sendable {
 
         let toolSpecs = toolRegistry.count > 0 ? toolRegistry.toolSpecs : nil
         let normalizedMessages = MessageNormalizer.normalize(messages)
-        let provider = try await resolveProvider(messages: normalizedMessages, toolSpecs: toolSpecs, systemPrompt: systemPrompt)
+        let provider = try await resolveProvider(messages: normalizedMessages, toolSpecs: toolSpecs, systemPrompt: systemPrompt, lastInferenceLatencyMs: lastInferenceLatencyMs)
 
         try await hookRegistry.invoke(BeforeModelCallEvent(messages: normalizedMessages, toolSpecs: toolSpecs))
 
@@ -397,7 +407,7 @@ struct AgentLoop: Sendable {
 
     private func runModelCycleStreamingWithMetrics(
         messages: [Message], systemPrompt: String?, toolChoice: ToolChoice?, cycleCount: Int,
-        parentSpanId: String,
+        parentSpanId: String, lastInferenceLatencyMs: Int? = nil,
         yield: @escaping @Sendable (AgentStreamEvent) async -> Void
     ) async throws -> (StreamAggregator.AggregatedResult, SpanContext, Int, Int?, String?) {
         let cycleSpan = observability.startChildSpan(
@@ -411,7 +421,7 @@ struct AgentLoop: Sendable {
 
         let toolSpecs = toolRegistry.count > 0 ? toolRegistry.toolSpecs : nil
         let normalizedMessages = MessageNormalizer.normalize(messages)
-        let provider = try await resolveProvider(messages: normalizedMessages, toolSpecs: toolSpecs, systemPrompt: systemPrompt)
+        let provider = try await resolveProvider(messages: normalizedMessages, toolSpecs: toolSpecs, systemPrompt: systemPrompt, lastInferenceLatencyMs: lastInferenceLatencyMs)
 
         try await hookRegistry.invoke(BeforeModelCallEvent(messages: normalizedMessages, toolSpecs: toolSpecs))
 
@@ -474,8 +484,20 @@ struct AgentLoop: Sendable {
 
     // MARK: - Helpers
 
-    private func resolveProvider(messages: [Message], toolSpecs: [ToolSpec]?, systemPrompt: String?) async throws -> any ModelProvider {
-        let ctx = RoutingContext(messages: messages, toolSpecs: toolSpecs, systemPrompt: systemPrompt)
+    private func resolveProvider(
+        messages: [Message],
+        toolSpecs: [ToolSpec]?,
+        systemPrompt: String?,
+        lastInferenceLatencyMs: Int? = nil
+    ) async throws -> any ModelProvider {
+        let ctx = RoutingContext(
+            messages: messages,
+            toolSpecs: toolSpecs,
+            systemPrompt: systemPrompt,
+            hints: routingHints,
+            deviceCapabilities: .current,
+            lastInferenceLatencyMs: lastInferenceLatencyMs
+        )
         return try await router.route(context: ctx)
     }
 

@@ -23,6 +23,18 @@ public final class Agent: @unchecked Sendable {
     /// When `true` (default), tools requested in the same turn run concurrently via TaskGroup.
     public var parallelToolExecution: Bool
 
+    /// Hints passed to the model router on every invocation.
+    ///
+    /// Set this before calling `run()` or `stream()` to influence routing:
+    /// ```swift
+    /// agent.routingHints = RoutingHints(privacySensitive: true)
+    /// let result = try await agent.run("Summarize my health records")
+    ///
+    /// agent.routingHints = RoutingHints(requiresDeepReasoning: true)
+    /// let result = try await agent.run("Solve this multi-step proof")
+    /// ```
+    public var routingHints: RoutingHints = RoutingHints()
+
     // MARK: - Components
 
     /// The model router (selects which provider to use).
@@ -378,7 +390,8 @@ public final class Agent: @unchecked Sendable {
             retryStrategy: retryStrategy,
             maxCycles: maxCycles,
             parallelToolExecution: parallelToolExecution,
-            agentState: state
+            agentState: state,
+            routingHints: routingHints
         )
     }
 

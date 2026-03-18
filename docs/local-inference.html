@@ -96,30 +96,30 @@ let agent = Agent(
       <table>
         <thead><tr><th>Policy</th><th>Routes to local when...</th></tr></thead>
         <tbody>
-          <tr><td><code>AlwaysCloudPolicy</code></td><td>Never (default when no policy specified)</td></tr>
-          <tr><td><code>AlwaysLocalPolicy</code></td><td>Always</td></tr>
-          <tr><td><code>LatencySensitivePolicy</code></td><td>The request has <code>preferLowLatency</code> or <code>privacySensitive</code> hints set</td></tr>
-          <tr><td><code>FallbackPolicy</code></td><td>Device is not thermally throttled and <code>requiresDeepReasoning</code> is not set</td></tr>
+          <tr><td><code>AlwaysCloudPolicy</code></td><td>Never. Default when no policy specified.</td></tr>
+          <tr><td><code>AlwaysLocalPolicy</code></td><td>Always.</td></tr>
+          <tr><td><code>LatencySensitivePolicy</code></td><td>Device is not critically throttled, prompt is not too long, and either a low-latency hint is set, privacy is requested, or the device is plugged in with nominal thermal state.</td></tr>
+          <tr><td><code>FallbackPolicy</code></td><td>Device thermal is below serious, free memory exceeds the threshold, deep reasoning is not requested, and the last inference was not too slow.</td></tr>
         </tbody>
       </table>
 
       <h3 id="routing-hints">Routing hints</h3>
-      <p>Your call site can influence the routing decision per-request by attaching hints to the agent's state before invoking it. The active policy reads these hints when deciding which provider to use.</p>
+      <p><code>agent.routingHints</code> is read on every call. Set it before <code>run()</code> or <code>stream()</code> to influence the routing decision:</p>
       <div class="code-block">
-        <div class="code-header"><span class="code-label">Passing hints at the call site</span><span class="code-lang">Swift</span></div>
-        <pre><code class="language-swift">// Force local for a privacy-sensitive prompt
+        <div class="code-header"><span class="code-label">Per-call hints</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">// Keep this prompt on-device — LatencySensitivePolicy will always route local
 agent.routingHints = RoutingHints(privacySensitive: true)
 let privateResult = try await agent.run("Summarize my health records")
 
-// Request cloud-quality reasoning for a hard problem
+// This task needs a strong model — FallbackPolicy and LatencySensitivePolicy both route cloud
 agent.routingHints = RoutingHints(requiresDeepReasoning: true)
-let deepResult = try await agent.run("Derive the proof for Fermat's last theorem")
+let deepResult = try await agent.run("Explain the proof of Fermat's Last Theorem step by step")
 
-// Override the policy entirely for one call
+// Bypass the policy entirely for one call
 agent.routingHints = RoutingHints(forceProvider: .local)
-let localResult = try await agent.run("Quick offline calculation")
+let localResult = try await agent.run("Quick offline calculation: 42 * 17")
 
-// Reset to default (let the policy decide)
+// Reset to defaults — let the policy decide again
 agent.routingHints = RoutingHints()</code></pre>
       </div>
 
@@ -127,21 +127,59 @@ agent.routingHints = RoutingHints()</code></pre>
       <table>
         <thead><tr><th>Hint</th><th>Type</th><th>Effect</th></tr></thead>
         <tbody>
-          <tr><td><code>preferLowLatency</code></td><td><code>Bool</code></td><td>Signal that response time matters more than capability</td></tr>
-          <tr><td><code>privacySensitive</code></td><td><code>Bool</code></td><td>Signal that the prompt should not leave the device</td></tr>
-          <tr><td><code>requiresDeepReasoning</code></td><td><code>Bool</code></td><td>Signal that this task needs a larger, more capable model</td></tr>
-          <tr><td><code>forceProvider</code></td><td><code>.local</code> / <code>.cloud</code></td><td>Bypass the policy and hard-route to a specific provider</td></tr>
+          <tr><td><code>preferLowLatency</code></td><td><code>Bool</code></td><td>Prefer fastest provider even at lower capability</td></tr>
+          <tr><td><code>privacySensitive</code></td><td><code>Bool</code></td><td>Prompt must not leave the device</td></tr>
+          <tr><td><code>requiresDeepReasoning</code></td><td><code>Bool</code></td><td>Task needs a large, capable model</td></tr>
+          <tr><td><code>forceProvider</code></td><td><code>.local</code> / <code>.cloud</code></td><td>Bypass policy entirely</td></tr>
         </tbody>
       </table>
 
       <h3 id="device-capabilities">Device capabilities</h3>
-      <p>Policies also receive live device state, so your routing logic can respond to what the hardware is actually doing at runtime:</p>
+      <p>Policies receive live device state on every routing call. All values are read fresh each time:</p>
       <div class="code-block">
         <div class="code-header"><span class="code-label">Available in RoutingContext.deviceCapabilities</span><span class="code-lang">Swift</span></div>
-        <pre><code class="language-swift">context.deviceCapabilities.hasNeuralEngine      // Bool  — Apple Silicon Neural Engine present
-context.deviceCapabilities.availableMemoryGB    // Double — RAM available right now
-context.deviceCapabilities.isPluggedIn          // Bool  — on power vs. battery
-context.deviceCapabilities.thermalState         // .nominal / .fair / .serious / .critical</code></pre>
+        <pre><code class="language-swift">context.deviceCapabilities.hasNeuralEngine    // true on Apple Silicon (arm64)
+context.deviceCapabilities.availableMemoryGB  // free + speculative RAM right now (vm_statistics64)
+context.deviceCapabilities.thermalState       // .nominal / .fair / .serious / .critical (ProcessInfo)
+context.deviceCapabilities.isPluggedIn        // requires DeviceCapabilities.isPluggedInProvider (see below)</code></pre>
+      </div>
+
+      <div class="callout callout-note">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body">
+          <p><code>isPluggedIn</code> requires a platform-specific hook because <code>StrandsAgents</code> only imports Foundation. Set <code>DeviceCapabilities.isPluggedInProvider</code> once at app startup:</p>
+          <pre style="margin-top:0.75rem"><code class="language-swift">// iOS (AppDelegate or @main):
+UIDevice.current.isBatteryMonitoringEnabled = true
+DeviceCapabilities.isPluggedInProvider = {
+    UIDevice.current.batteryState != .unplugged
+}
+
+// macOS (using IOKit — add IOKit to your app target, not to StrandsAgents):
+DeviceCapabilities.isPluggedInProvider = {
+    IOPSCopyExternalPowerAdapterDetails() != nil
+}</code></pre>
+          <p style="margin-top:0.5rem">Until you set this, <code>isPluggedIn</code> defaults to <code>true</code>.</p>
+        </div>
+      </div>
+
+      <h3 id="last-latency">Last inference latency</h3>
+      <p>On the second and subsequent cycles of a conversation, policies also receive the latency of the previous model call. <code>FallbackPolicy</code> uses this to fall back to cloud if the local model is running slowly:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">context.lastInferenceLatencyMs  // Int? — nil on first call, ms on subsequent calls
+
+// FallbackPolicy defaults: fall back to cloud if last call exceeded 5 seconds
+FallbackPolicy(slowInferenceThresholdMs: 5000, minimumMemoryGB: 1.5)</code></pre>
+      </div>
+
+      <h3 id="prompt-tokens">Estimated prompt tokens</h3>
+      <p>A rough token estimate (character count / 4) is computed automatically and available to all policies. Use it to avoid sending very long contexts to local models:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">context.estimatedPromptTokens  // Int — rough estimate, updated each cycle
+
+// LatencySensitivePolicy defaults: route cloud if prompt exceeds 2000 estimated tokens
+LatencySensitivePolicy(minimumMemoryGBOnBattery: 2.0, maxLocalPromptTokens: 2000)</code></pre>
       </div>
 
       <h3 id="custom-policy">Writing a custom policy</h3>
