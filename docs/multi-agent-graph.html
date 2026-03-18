@@ -24,292 +24,202 @@
         <li>You know all the steps before execution starts</li>
         <li>Some steps are independent and can run concurrently</li>
         <li>You want predictable, auditable execution order</li>
-        <li>Downstream agents need the results of upstream agents</li>
+        <li>Downstream agents need the results of upstream agents as context</li>
       </ul>
 
       <h2 id="how-it-works">How It Works</h2>
-      <p>Each node is an agent with an ID and an optional list of <code>dependencies</code>. The orchestrator runs all nodes whose dependencies are satisfied concurrently, then feeds their outputs to the next nodes.</p>
+      <p>Each node is an agent with an ID and an optional <code>dependencies</code> list. Nodes with no unsatisfied dependencies run immediately; nodes with dependencies wait until all their inputs are ready. The orchestrator handles scheduling automatically.</p>
 
-      <!-- ── Basic Pipeline Diagram ── -->
-      <div class="dag-wrap">
-        <svg class="dag-svg" id="dag-basic" viewBox="0 0 520 196" xmlns="http://www.w3.org/2000/svg">
+      <!-- ── Basic concept: lint + test → build ── -->
+      <div class="pipe-wrap">
+        <svg class="pipe-svg" id="svg-basic" viewBox="0 0 460 162" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-              <polygon points="0 0, 8 3, 0 6" fill="#4a4a6a"/>
-            </marker>
-            <marker id="arr-blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-              <polygon points="0 0, 8 3, 0 6" fill="#89b4fa"/>
-            </marker>
-            <marker id="arr-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-              <polygon points="0 0, 8 3, 0 6" fill="#a6e3a1"/>
+            <marker id="a1" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
+              <polygon points="0 0,7 2.5,0 5" fill="#4a4a6a"/>
             </marker>
           </defs>
 
-          <!-- Stage bands -->
-          <rect x="0" y="8" width="520" height="76" rx="6" fill="rgba(137,180,250,0.04)" stroke="rgba(137,180,250,0.1)" stroke-width="1"/>
-          <rect x="0" y="112" width="520" height="76" rx="6" fill="rgba(166,227,161,0.04)" stroke="rgba(166,227,161,0.1)" stroke-width="1"/>
+          <!-- Column backgrounds -->
+          <rect x="8"   y="8" width="200" height="146" rx="8" fill="rgba(137,180,250,0.05)" stroke="rgba(137,180,250,0.15)" stroke-width="1"/>
+          <rect x="252" y="8" width="200" height="146" rx="8" fill="rgba(166,227,161,0.05)"  stroke="rgba(166,227,161,0.15)"  stroke-width="1"/>
 
-          <!-- Stage labels -->
-          <text x="12" y="30" class="dag-stage-label">STAGE 1</text>
-          <text x="12" y="44" class="dag-stage-sub">runs in parallel</text>
-          <text x="12" y="138" class="dag-stage-label">STAGE 2</text>
-          <text x="12" y="152" class="dag-stage-sub">waits for both</text>
+          <!-- Column headers -->
+          <text x="108" y="27" class="pipe-col-title">VALIDATE</text>
+          <text x="108" y="39" class="pipe-col-sub">runs in parallel</text>
+          <text x="352" y="27" class="pipe-col-title">BUILD</text>
+          <text x="352" y="39" class="pipe-col-sub">waits for both</text>
 
-          <!-- Edges (drawn behind nodes) -->
-          <path id="edge-r-w" d="M 230 84 C 230 98 260 98 260 112" stroke="#4a4a6a" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
-          <path id="edge-f-w" d="M 340 84 C 340 98 290 98 290 112" stroke="#4a4a6a" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+          <!-- Arrows -->
+          <path d="M 208 65 C 230 65 230 94 252 94" stroke="#3a3a5a" stroke-width="1.5" fill="none" marker-end="url(#a1)"/>
+          <path d="M 208 113 C 230 113 230 94 252 94" stroke="#3a3a5a" stroke-width="1.5" fill="none" marker-end="url(#a1)"/>
 
-          <!-- Node: research -->
-          <g id="node-research" class="dag-node dag-pending">
-            <rect x="130" y="20" width="140" height="44" rx="8"/>
-            <text x="200" y="47" class="dag-node-label">research</text>
+          <!-- Nodes -->
+          <g id="b-lint" class="pnode pending">
+            <rect x="20" y="48" width="176" height="36" rx="7"/>
+            <text x="108" y="71" class="pnode-label">lint</text>
           </g>
-
-          <!-- Node: fact-check -->
-          <g id="node-factcheck" class="dag-node dag-pending">
-            <rect x="290" y="20" width="140" height="44" rx="8"/>
-            <text x="360" y="47" class="dag-node-label">fact-check</text>
+          <g id="b-test" class="pnode pending">
+            <rect x="20" y="96" width="176" height="36" rx="7"/>
+            <text x="108" y="119" class="pnode-label">test</text>
           </g>
-
-          <!-- Node: write -->
-          <g id="node-write" class="dag-node dag-waiting">
-            <rect x="200" y="112" width="140" height="44" rx="8"/>
-            <text x="270" y="139" class="dag-node-label">write</text>
+          <g id="b-build" class="pnode waiting">
+            <rect x="264" y="76" width="176" height="36" rx="7"/>
+            <text x="352" y="99" class="pnode-label">build</text>
           </g>
         </svg>
-        <button class="dag-play-btn" onclick="animateBasic()">▶ Replay</button>
+        <button class="pipe-btn" onclick="playBasic()">▶ Replay</button>
       </div>
 
       <h2 id="basic-example">Basic Example</h2>
+      <p>A CI/CD-style pipeline: lint and test run concurrently. Once both pass, the build agent runs using their results as context.</p>
       <div class="code-block">
-        <div class="code-header"><span class="code-label">Research + write pipeline</span><span class="code-lang">Swift</span></div>
+        <div class="code-header"><span class="code-label">ci_pipeline.swift</span><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">import StrandsAgents
 
-let researchAgent = Agent(
+let lintAgent = Agent(
     model: provider,
-    tools: [searchWeb],
-    systemPrompt: "You are a research assistant. Find accurate, relevant information."
+    tools: [readSourceFiles],
+    systemPrompt: "Analyze code for style violations and errors. Report each issue with file and line."
 )
 
-let factCheckAgent = Agent(
+let testAgent = Agent(
     model: provider,
-    tools: [searchWeb],
-    systemPrompt: "You verify claims. Flag anything unsubstantiated."
+    tools: [runTestSuite],
+    systemPrompt: "Run the test suite. Report any failures with their error messages."
 )
 
-let writerAgent = Agent(
+let buildAgent = Agent(
     model: provider,
-    systemPrompt: "You write clear, engaging articles based on provided research."
+    tools: [compileBuild],
+    systemPrompt: "Build the project. You will receive lint and test results as context first."
 )
 
 let graph = GraphOrchestrator(nodes: [
-    GraphNode(id: "research",    agent: researchAgent),
-    GraphNode(id: "fact-check",  agent: factCheckAgent),
-    // "write" receives the outputs of both research and fact-check
-    GraphNode(id: "write",       agent: writerAgent,
-              dependencies: ["research", "fact-check"]),
+    GraphNode(id: "lint",  agent: lintAgent),
+    GraphNode(id: "test",  agent: testAgent),
+    // build waits for both lint and test to finish
+    GraphNode(id: "build", agent: buildAgent, dependencies: ["lint", "test"]),
 ])
 
-let result = try await graph.run("Write an article about quantum computing")
-print(result.output)  // final output from the "write" node</code></pre>
+let result = try await graph.run("Run CI checks on the latest commit")
+print(result.output)  // build agent's final summary</code></pre>
       </div>
 
-      <h2 id="dependencies">Dependencies</h2>
-      <p>A node's output is automatically forwarded as context to each node that declares it as a dependency. You don't need to wire the outputs manually — the orchestrator handles it.</p>
-      <p>This four-stage pipeline shows how dependencies chain through the graph:</p>
+      <h2 id="chaining">Chaining Stages</h2>
+      <p>Stages chain by declaring dependencies. Each node's output is forwarded as context to every node that lists it as a dependency — no manual wiring needed.</p>
+      <p>A full CI/CD pipeline shows this clearly: three checks run in parallel, then each subsequent stage unblocks only after the previous one completes.</p>
 
-      <!-- ── Multi-stage Pipeline Diagram ── -->
-      <div class="dag-wrap">
-        <svg class="dag-svg" viewBox="0 0 520 340" xmlns="http://www.w3.org/2000/svg">
+      <!-- ── Full CI/CD: lint+test+security → build → deploy → smoke ── -->
+      <div class="pipe-wrap">
+        <svg class="pipe-svg" id="svg-full" viewBox="0 0 696 178" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <marker id="arr2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-              <polygon points="0 0, 8 3, 0 6" fill="#4a4a6a"/>
+            <marker id="a2" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
+              <polygon points="0 0,7 2.5,0 5" fill="#4a4a6a"/>
             </marker>
           </defs>
 
-          <!-- Stage bands -->
-          <rect x="0"  y="6"   width="520" height="68" rx="6" fill="rgba(137,180,250,0.04)" stroke="rgba(137,180,250,0.1)" stroke-width="1"/>
-          <rect x="0"  y="88"  width="520" height="68" rx="6" fill="rgba(203,166,247,0.04)" stroke="rgba(203,166,247,0.1)" stroke-width="1"/>
-          <rect x="0"  y="170" width="520" height="68" rx="6" fill="rgba(249,226,175,0.04)" stroke="rgba(249,226,175,0.1)" stroke-width="1"/>
-          <rect x="0"  y="252" width="520" height="68" rx="6" fill="rgba(166,227,161,0.04)" stroke="rgba(166,227,161,0.1)" stroke-width="1"/>
+          <!-- Column backgrounds -->
+          <rect x="6"   y="6" width="166" height="166" rx="8" fill="rgba(137,180,250,0.05)" stroke="rgba(137,180,250,0.15)" stroke-width="1"/>
+          <rect x="196" y="6" width="118" height="166" rx="8" fill="rgba(203,166,247,0.05)" stroke="rgba(203,166,247,0.15)" stroke-width="1"/>
+          <rect x="338" y="6" width="118" height="166" rx="8" fill="rgba(249,226,175,0.05)" stroke="rgba(249,226,175,0.15)" stroke-width="1"/>
+          <rect x="480" y="6" width="210" height="166" rx="8" fill="rgba(166,227,161,0.05)"  stroke="rgba(166,227,161,0.15)"  stroke-width="1"/>
 
-          <!-- Stage labels -->
-          <text x="10" y="28" class="dag-stage-label">STAGE 1</text><text x="10" y="42" class="dag-stage-sub">parallel</text>
-          <text x="10" y="110" class="dag-stage-label">STAGE 2</text><text x="10" y="124" class="dag-stage-sub">waits for 1</text>
-          <text x="10" y="192" class="dag-stage-label">STAGE 3</text><text x="10" y="206" class="dag-stage-sub">waits for 2</text>
-          <text x="10" y="274" class="dag-stage-label">STAGE 4</text><text x="10" y="288" class="dag-stage-sub">waits for 2+3</text>
+          <!-- Column headers -->
+          <text x="89"  y="24" class="pipe-col-title">VALIDATE</text>
+          <text x="89"  y="35" class="pipe-col-sub">3 parallel checks</text>
+          <text x="255" y="24" class="pipe-col-title">BUILD</text>
+          <text x="255" y="35" class="pipe-col-sub">waits for all</text>
+          <text x="397" y="24" class="pipe-col-title">DEPLOY</text>
+          <text x="397" y="35" class="pipe-col-sub">waits for build</text>
+          <text x="585" y="24" class="pipe-col-title">VERIFY</text>
+          <text x="585" y="35" class="pipe-col-sub">waits for deploy</text>
 
-          <!-- Edges -->
-          <!-- outline → draft -->
-          <path d="M 230 74 C 230 82 260 82 260 88" stroke="#4a4a6a" stroke-width="1.5" fill="none" marker-end="url(#arr2)"/>
-          <!-- references → draft -->
-          <path d="M 340 74 C 340 82 290 82 290 88" stroke="#4a4a6a" stroke-width="1.5" fill="none" marker-end="url(#arr2)"/>
-          <!-- draft → review -->
-          <path d="M 270 156 L 270 170" stroke="#4a4a6a" stroke-width="1.5" fill="none" marker-end="url(#arr2)"/>
-          <!-- draft → polish (skip one level) -->
-          <path d="M 245 156 C 245 168 170 230 190 252" stroke="#4a4a6a" stroke-width="1.5" fill="none" stroke-dasharray="4 3" marker-end="url(#arr2)"/>
-          <!-- review → polish -->
-          <path d="M 270 238 L 270 252" stroke="#4a4a6a" stroke-width="1.5" fill="none" marker-end="url(#arr2)"/>
+          <!-- Arrows: validate → build -->
+          <path d="M 172 57  C 185 57  185 95  196 95"  stroke="#3a3a5a" stroke-width="1.5" fill="none" marker-end="url(#a2)"/>
+          <path d="M 172 95  L 196 95"                  stroke="#3a3a5a" stroke-width="1.5" fill="none" marker-end="url(#a2)"/>
+          <path d="M 172 133 C 185 133 185 95  196 95"  stroke="#3a3a5a" stroke-width="1.5" fill="none" marker-end="url(#a2)"/>
+          <!-- build → deploy -->
+          <path d="M 314 95 L 338 95" stroke="#3a3a5a" stroke-width="1.5" fill="none" marker-end="url(#a2)"/>
+          <!-- deploy → verify -->
+          <path d="M 456 95 L 480 95" stroke="#3a3a5a" stroke-width="1.5" fill="none" marker-end="url(#a2)"/>
 
-          <!-- Nodes -->
-          <g class="dag-node dag-blue">
-            <rect x="130" y="18" width="130" height="40" rx="8"/>
-            <text x="195" y="43" class="dag-node-label">outline</text>
+          <!-- Nodes: validate column -->
+          <g id="f-lint" class="pnode pending">
+            <rect x="16"  y="42"  width="144" height="30" rx="6"/>
+            <text x="88"  y="62"  class="pnode-label">lint</text>
           </g>
-          <g class="dag-node dag-blue">
-            <rect x="290" y="18" width="130" height="40" rx="8"/>
-            <text x="355" y="43" class="dag-node-label">references</text>
+          <g id="f-test" class="pnode pending">
+            <rect x="16"  y="80"  width="144" height="30" rx="6"/>
+            <text x="88"  y="100" class="pnode-label">test</text>
           </g>
-          <g class="dag-node dag-purple">
-            <rect x="200" y="100" width="130" height="40" rx="8"/>
-            <text x="265" y="125" class="dag-node-label">draft</text>
-          </g>
-          <g class="dag-node dag-yellow">
-            <rect x="200" y="182" width="130" height="40" rx="8"/>
-            <text x="265" y="207" class="dag-node-label">review</text>
-          </g>
-          <g class="dag-node dag-green">
-            <rect x="200" y="264" width="130" height="40" rx="8"/>
-            <text x="265" y="289" class="dag-node-label">polish</text>
+          <g id="f-security" class="pnode pending">
+            <rect x="16"  y="118" width="144" height="30" rx="6"/>
+            <text x="88"  y="138" class="pnode-label">security scan</text>
           </g>
 
-          <!-- Dashed arrow legend -->
-          <line x1="380" y1="200" x2="410" y2="200" stroke="#4a4a6a" stroke-width="1.5" stroke-dasharray="4 3"/>
-          <text x="416" y="204" class="dag-legend">draft also feeds polish directly</text>
+          <!-- build -->
+          <g id="f-build" class="pnode waiting">
+            <rect x="206" y="80"  width="98"  height="30" rx="6"/>
+            <text x="255" y="100" class="pnode-label">build</text>
+          </g>
+
+          <!-- deploy -->
+          <g id="f-deploy" class="pnode waiting">
+            <rect x="348" y="80"  width="98"  height="30" rx="6"/>
+            <text x="397" y="100" class="pnode-label">deploy</text>
+          </g>
+
+          <!-- smoke-test -->
+          <g id="f-smoke" class="pnode waiting">
+            <rect x="492" y="80"  width="186" height="30" rx="6"/>
+            <text x="585" y="100" class="pnode-label">smoke test</text>
+          </g>
         </svg>
+        <button class="pipe-btn" onclick="playFull()">▶ Replay</button>
       </div>
 
       <div class="code-block">
-        <div class="code-header"><span class="code-label">Multi-stage pipeline</span><span class="code-lang">Swift</span></div>
-        <pre><code class="language-swift">// Stage 1: two independent agents run in parallel
-GraphNode(id: "outline",    agent: outlineAgent),
-GraphNode(id: "references", agent: referenceAgent),
+        <div class="code-header"><span class="code-label">Full pipeline</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">let graph = GraphOrchestrator(nodes: [
+    // Stage 1 — three independent checks run concurrently
+    GraphNode(id: "lint",     agent: lintAgent),
+    GraphNode(id: "test",     agent: testAgent),
+    GraphNode(id: "security", agent: securityAgent),
 
-// Stage 2: draft uses outline + references
-GraphNode(id: "draft",  agent: draftAgent,
-          dependencies: ["outline", "references"]),
+    // Stage 2 — build waits for all three
+    GraphNode(id: "build",  agent: buildAgent,  dependencies: ["lint", "test", "security"]),
 
-// Stage 3: review uses only the draft
-GraphNode(id: "review", agent: reviewAgent,
-          dependencies: ["draft"]),
+    // Stage 3 — deploy waits for a clean build
+    GraphNode(id: "deploy", agent: deployAgent, dependencies: ["build"]),
 
-// Stage 4: final polish uses draft + review
-GraphNode(id: "polish", agent: polishAgent,
-          dependencies: ["draft", "review"])</code></pre>
+    // Stage 4 — smoke test waits for a live deployment
+    GraphNode(id: "smoke",  agent: smokeAgent,  dependencies: ["deploy"]),
+])
+
+let result = try await graph.run("Release v2.1.0")
+print(result.output)</code></pre>
       </div>
 
       <h2 id="parallel-execution">Parallel Execution</h2>
-      <p>Nodes without dependencies — or whose dependencies have all completed — run concurrently. In the example above, <code>outline</code> and <code>references</code> run at the same time. Execution is ordered by the dependency graph, not by the order you declare the nodes.</p>
+      <p>The orchestrator resolves the dependency graph at runtime. In the pipeline above, <code>lint</code>, <code>test</code>, and <code>security</code> all start at the same moment — they don't wait for each other. This is the main performance benefit over running agents sequentially.</p>
 
       <div class="callout callout-tip">
         <span class="callout-icon">💡</span>
-        <div class="callout-body"><p>Use parallel stages for tasks like summarization, classification, or extraction that do not depend on each other. This can cut wall-clock time significantly on complex pipelines.</p></div>
+        <div class="callout-body"><p>Nodes are declared in any order — the dependency list, not the declaration order, determines execution. Add as many independent nodes as you like; they all run concurrently.</p></div>
       </div>
 
       <h2 id="accessing-results">Accessing Intermediate Results</h2>
-      <p>The <code>GraphResult</code> includes the outputs of every node, keyed by node ID:</p>
+      <p><code>GraphResult</code> contains the output of every node, keyed by ID. Useful for logging, debugging, or surfacing intermediate results in your UI:</p>
       <div class="code-block">
         <div class="code-header"><span class="code-lang">Swift</span></div>
-        <pre><code class="language-swift">let result = try await graph.run("Write an article about black holes")
+        <pre><code class="language-swift">let result = try await graph.run("Release v2.1.0")
 
-// Final output (from the last node in the graph)
-print(result.output)
+print(result.output)  // final node's output (smoke test summary)
 
-// Output from a specific intermediate node
-print(result.nodeOutputs["research"] ?? "")
-print(result.nodeOutputs["fact-check"] ?? "")</code></pre>
-      </div>
-
-      <h2 id="real-world-example">Real-World Example: Code Review Pipeline</h2>
-      <p>Three reviewers run in parallel, each focused on a different concern. A summary agent synthesizes all three results.</p>
-
-      <!-- ── Code Review Diagram ── -->
-      <div class="dag-wrap">
-        <svg class="dag-svg" id="dag-review" viewBox="0 0 560 200" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <marker id="arr3" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-              <polygon points="0 0, 8 3, 0 6" fill="#4a4a6a"/>
-            </marker>
-            <marker id="arr3-blue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-              <polygon points="0 0, 8 3, 0 6" fill="#89b4fa"/>
-            </marker>
-            <marker id="arr3-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-              <polygon points="0 0, 8 3, 0 6" fill="#a6e3a1"/>
-            </marker>
-          </defs>
-
-          <!-- Stage bands -->
-          <rect x="0" y="8"   width="560" height="74" rx="6" fill="rgba(137,180,250,0.04)" stroke="rgba(137,180,250,0.1)" stroke-width="1"/>
-          <rect x="0" y="116" width="560" height="74" rx="6" fill="rgba(166,227,161,0.04)" stroke="rgba(166,227,161,0.1)" stroke-width="1"/>
-
-          <!-- Stage labels -->
-          <text x="10" y="30" class="dag-stage-label">STAGE 1</text>
-          <text x="10" y="44" class="dag-stage-sub">parallel</text>
-          <text x="10" y="142" class="dag-stage-label">STAGE 2</text>
-          <text x="10" y="156" class="dag-stage-sub">waits for all</text>
-
-          <!-- Edges -->
-          <path id="er-sec"  d="M 140 82 C 140 98 245 98 245 116" stroke="#4a4a6a" stroke-width="1.5" fill="none" marker-end="url(#arr3)"/>
-          <path id="er-perf" d="M 280 82 L 280 116"                stroke="#4a4a6a" stroke-width="1.5" fill="none" marker-end="url(#arr3)"/>
-          <path id="er-style" d="M 420 82 C 420 98 315 98 315 116" stroke="#4a4a6a" stroke-width="1.5" fill="none" marker-end="url(#arr3)"/>
-
-          <!-- Nodes -->
-          <g id="rn-security" class="dag-node dag-pending">
-            <rect x="60"  y="20" width="140" height="44" rx="8"/>
-            <text x="130" y="47" class="dag-node-label">security</text>
-          </g>
-          <g id="rn-perf" class="dag-node dag-pending">
-            <rect x="210" y="20" width="140" height="44" rx="8"/>
-            <text x="280" y="47" class="dag-node-label">performance</text>
-          </g>
-          <g id="rn-style" class="dag-node dag-pending">
-            <rect x="360" y="20" width="140" height="44" rx="8"/>
-            <text x="430" y="47" class="dag-node-label">style</text>
-          </g>
-          <g id="rn-summary" class="dag-node dag-waiting">
-            <rect x="210" y="128" width="140" height="44" rx="8"/>
-            <text x="280" y="155" class="dag-node-label">summary</text>
-          </g>
-        </svg>
-        <button class="dag-play-btn" onclick="animateReview()">▶ Replay</button>
-      </div>
-
-      <div class="code-block">
-        <div class="code-header"><span class="code-label">Parallel code review</span><span class="code-lang">Swift</span></div>
-        <pre><code class="language-swift">let securityReviewer = Agent(
-    model: provider,
-    systemPrompt: "You review code for security vulnerabilities. Be specific."
-)
-let performanceReviewer = Agent(
-    model: provider,
-    systemPrompt: "You review code for performance issues. Suggest optimizations."
-)
-let styleReviewer = Agent(
-    model: provider,
-    systemPrompt: "You review code for style and readability. Suggest improvements."
-)
-let summaryWriter = Agent(
-    model: provider,
-    systemPrompt: "You synthesize multiple code reviews into a single actionable summary."
-)
-
-let graph = GraphOrchestrator(nodes: [
-    GraphNode(id: "security",    agent: securityReviewer),
-    GraphNode(id: "performance", agent: performanceReviewer),
-    GraphNode(id: "style",       agent: styleReviewer),
-    GraphNode(id: "summary",     agent: summaryWriter,
-              dependencies: ["security", "performance", "style"]),
-])
-
-let code = """
-func fetchUser(id: String) -> User? {
-    let query = "SELECT * FROM users WHERE id = '\(id)'"
-    return db.execute(query).first
-}
-"""
-
-let result = try await graph.run("Review this Swift code:\n\n\(code)")
-print(result.output)  // synthesized review from all three reviewers</code></pre>
+// Inspect any intermediate node
+print(result.nodeOutputs["lint"]     ?? "")  // lint report
+print(result.nodeOutputs["security"] ?? "")  // security findings
+print(result.nodeOutputs["build"]    ?? "")  // build log</code></pre>
       </div>
 
       <div class="page-nav">
@@ -323,167 +233,107 @@ print(result.output)  // synthesized review from all three reviewers</code></pre
 <script src="nav.js"></script>
 
 <style>
-/* ── DAG diagram container ── */
-.dag-wrap {
-  margin: 1.5rem 0;
-  position: relative;
-}
-.dag-svg {
-  width: 100%;
-  height: auto;
-  display: block;
-}
+/* ── Pipeline diagram wrapper ── */
+.pipe-wrap { margin: 1.5rem 0; position: relative; }
+.pipe-svg  { width: 100%; height: auto; display: block; }
 
 /* ── Node base ── */
-.dag-node rect {
+.pnode rect {
   stroke-width: 1.5;
-  transition: fill 0.4s ease, stroke 0.4s ease;
+  transition: fill 0.35s ease, stroke 0.35s ease;
 }
-.dag-node-label {
+.pnode-label {
   font-family: "SF Mono", "JetBrains Mono", Consolas, monospace;
-  font-size: 13px;
-  font-weight: 600;
-  text-anchor: middle;
-  dominant-baseline: middle;
-  fill: #cdd6f4;
-  pointer-events: none;
+  font-size: 12px; font-weight: 600;
+  text-anchor: middle; dominant-baseline: middle;
+  fill: #9399b2; pointer-events: none;
+  transition: fill 0.35s ease;
 }
 
-/* ── Stage labels ── */
-.dag-stage-label {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+/* ── Column headers ── */
+.pipe-col-title {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; text-anchor: middle;
   fill: #6c7086;
   font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
-.dag-stage-sub {
-  font-size: 9px;
-  fill: #45475a;
-  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-}
-.dag-legend {
-  font-size: 10px;
+.pipe-col-sub {
+  font-size: 8.5px; text-anchor: middle;
   fill: #45475a;
   font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
 
 /* ── Node states ── */
-.dag-pending rect {
-  fill: #1a1a2e;
-  stroke: #313244;
-}
-.dag-waiting rect {
-  fill: #1a1a2e;
-  stroke: rgba(240,81,56,0.3);
-  stroke-dasharray: 5 3;
-}
-.dag-running rect {
-  fill: rgba(137,180,250,0.12);
-  stroke: #89b4fa;
-}
-.dag-done rect {
-  fill: rgba(166,227,161,0.12);
-  stroke: #a6e3a1;
-}
-.dag-done .dag-node-label { fill: #a6e3a1; }
-.dag-running .dag-node-label { fill: #89b4fa; }
+.pnode.pending  rect { fill: #15151f; stroke: #2a2a40; }
+.pnode.waiting  rect { fill: #15151f; stroke: rgba(240,81,56,0.25); stroke-dasharray: 5 3; }
+.pnode.running  rect { fill: rgba(137,180,250,0.1); stroke: #89b4fa; }
+.pnode.done     rect { fill: rgba(166,227,161,0.1); stroke: #a6e3a1; }
+.pnode.running  .pnode-label { fill: #89b4fa; }
+.pnode.done     .pnode-label { fill: #a6e3a1; }
 
-/* Static colour variants (multi-stage diagram) */
-.dag-blue   rect { fill: rgba(137,180,250,0.1);  stroke: rgba(137,180,250,0.4); }
-.dag-purple rect { fill: rgba(203,166,247,0.1);  stroke: rgba(203,166,247,0.4); }
-.dag-yellow rect { fill: rgba(249,226,175,0.1);  stroke: rgba(249,226,175,0.4); }
-.dag-green  rect { fill: rgba(166,227,161,0.1);  stroke: rgba(166,227,161,0.4); }
-.dag-blue   .dag-node-label { fill: #89b4fa; }
-.dag-purple .dag-node-label { fill: #cba6f7; }
-.dag-yellow .dag-node-label { fill: #f9e2af; }
-.dag-green  .dag-node-label { fill: #a6e3a1; }
+/* ── Pulse on running nodes ── */
+@keyframes ppulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
+.pnode.running rect { animation: ppulse 1s ease-in-out infinite; }
 
-/* ── Running pulse animation ── */
-@keyframes dag-pulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.5; }
-}
-.dag-running rect { animation: dag-pulse 1s ease-in-out infinite; }
-
-/* ── Edge state ── */
-.edge-active { stroke: #89b4fa !important; }
-.edge-active[marker-end] { marker-end: url(#arr-blue) !important; }
-.edge-done   { stroke: #a6e3a1 !important; }
-
-/* ── Play button ── */
-.dag-play-btn {
-  position: absolute;
-  top: 12px; right: 12px;
-  background: rgba(240,81,56,0.12);
-  border: 1px solid rgba(240,81,56,0.3);
-  color: #F05138;
-  font-size: 12px; font-weight: 600;
-  padding: 4px 12px; border-radius: 6px;
-  cursor: pointer;
+/* ── Replay button ── */
+.pipe-btn {
+  position: absolute; top: 12px; right: 12px;
+  background: rgba(240,81,56,0.1); border: 1px solid rgba(240,81,56,0.28);
+  color: #F05138; font-size: 11.5px; font-weight: 600;
+  padding: 4px 12px; border-radius: 6px; cursor: pointer;
   transition: background 0.15s;
 }
-.dag-play-btn:hover { background: rgba(240,81,56,0.2); }
+.pipe-btn:hover { background: rgba(240,81,56,0.2); }
 </style>
 
 <script>
-function setNodeState(id, state) {
+function setState(id, state) {
   const el = document.getElementById(id);
-  if (!el) return;
-  el.className.baseVal = 'dag-node ' + state;
+  if (el) el.className.baseVal = 'pnode ' + state;
 }
 
-// ── Basic pipeline animation ──
-function animateBasic() {
-  // reset
-  ['node-research','node-factcheck'].forEach(id => setNodeState(id, 'dag-pending'));
-  setNodeState('node-write', 'dag-waiting');
+function playBasic() {
+  ['b-lint','b-test'].forEach(id => setState(id, 'pending'));
+  setState('b-build', 'waiting');
 
-  // t=400ms: both stage-1 nodes start running simultaneously
-  setTimeout(() => {
-    setNodeState('node-research',  'dag-running');
-    setNodeState('node-factcheck', 'dag-running');
-  }, 400);
-
-  // t=2000ms: both finish
-  setTimeout(() => {
-    setNodeState('node-research',  'dag-done');
-    setNodeState('node-factcheck', 'dag-done');
-  }, 2000);
-
-  // t=2400ms: write starts
-  setTimeout(() => setNodeState('node-write', 'dag-running'), 2400);
-
-  // t=4000ms: write finishes
-  setTimeout(() => setNodeState('node-write', 'dag-done'), 4000);
+  setTimeout(() => { setState('b-lint','running'); setState('b-test','running'); }, 350);
+  setTimeout(() => { setState('b-lint','done');    setState('b-test','done');    }, 1900);
+  setTimeout(() => setState('b-build', 'running'), 2250);
+  setTimeout(() => setState('b-build', 'done'),    3800);
 }
 
-// ── Code review animation ──
-function animateReview() {
-  ['rn-security','rn-perf','rn-style'].forEach(id => setNodeState(id, 'dag-pending'));
-  setNodeState('rn-summary', 'dag-waiting');
+function playFull() {
+  ['f-lint','f-test','f-security'].forEach(id => setState(id, 'pending'));
+  ['f-build','f-deploy','f-smoke'].forEach(id => setState(id, 'waiting'));
 
+  // Stage 1 — all three fire simultaneously
   setTimeout(() => {
-    setNodeState('rn-security', 'dag-running');
-    setNodeState('rn-perf',     'dag-running');
-    setNodeState('rn-style',    'dag-running');
-  }, 400);
-
+    setState('f-lint',     'running');
+    setState('f-test',     'running');
+    setState('f-security', 'running');
+  }, 350);
   setTimeout(() => {
-    setNodeState('rn-security', 'dag-done');
-    setNodeState('rn-perf',     'dag-done');
-    setNodeState('rn-style',    'dag-done');
-  }, 2000);
+    setState('f-lint',     'done');
+    setState('f-test',     'done');
+    setState('f-security', 'done');
+  }, 1900);
 
-  setTimeout(() => setNodeState('rn-summary', 'dag-running'), 2400);
-  setTimeout(() => setNodeState('rn-summary', 'dag-done'),    4000);
+  // Stage 2
+  setTimeout(() => setState('f-build',  'running'), 2250);
+  setTimeout(() => setState('f-build',  'done'),    3500);
+
+  // Stage 3
+  setTimeout(() => setState('f-deploy', 'running'), 3850);
+  setTimeout(() => setState('f-deploy', 'done'),    5100);
+
+  // Stage 4
+  setTimeout(() => setState('f-smoke',  'running'), 5450);
+  setTimeout(() => setState('f-smoke',  'done'),    6700);
 }
 
-// Auto-play on load
 document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(animateBasic,  600);
-  setTimeout(animateReview, 900);
+  setTimeout(playBasic, 500);
+  setTimeout(playFull,  800);
 });
 </script>
 </body>
