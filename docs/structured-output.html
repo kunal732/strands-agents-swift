@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Structured Output — Strands Agents Swift</title>
+  <title>Structured Output -- Strands Agents Swift</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -17,10 +17,10 @@
     <article>
       <div class="breadcrumb"><a href="index.html">Home</a><span class="breadcrumb-sep">›</span>Concepts<span class="breadcrumb-sep">›</span>Structured Output</div>
       <h1>Structured Output</h1>
-      <p class="page-description">Force the model to return a typed Swift struct instead of free-form text. Guaranteed to decode — no parsing, no <code>guard</code> chains.</p>
+      <p class="page-description">Force the model to return a typed Swift struct instead of free-form text. Guaranteed to decode -- no parsing, no <code>guard</code> chains.</p>
 
       <h2 id="how-it-works">How It Works</h2>
-      <p>Under the hood, <code>runStructured()</code> registers a hidden tool whose input schema is your type's <code>jsonSchema</code>. The model <em>must</em> call that tool to respond — it cannot return free text. The SDK then decodes the tool's input directly into your Swift type.</p>
+      <p>Under the hood, <code>runStructured()</code> registers a hidden tool whose input schema is your type's <code>jsonSchema</code>. The model <em>must</em> call that tool to respond -- it cannot return free text. The SDK then decodes the tool's input directly into your Swift type.</p>
       <div class="flow">
         <div class="flow-row">
           <span class="flow-node blue">Your prompt</span>
@@ -43,7 +43,7 @@ struct Recipe {
     let ingredients: [String]
     let steps: [String]
     let prepTimeMinutes: Int
-    let note: String?   // optional — omitted from "required"
+    let note: String?   // optional -- omitted from "required"
 }
 
 let agent = Agent(model: provider)
@@ -58,7 +58,7 @@ print(recipe.note ?? "")         // may be nil</code></pre>
       <div class="callout callout-note">
         <span class="callout-icon">ℹ️</span>
         <div class="callout-body">
-          <p><code>@StructuredOutput</code> (attribute) and <code>StructuredOutput</code> (protocol) coexist — the same pattern Swift Data uses with <code>@Model</code>/<code>Model</code>. Xcode may show a warning about the name overlap; it compiles and runs correctly.</p>
+          <p><code>@StructuredOutput</code> (attribute) and <code>StructuredOutput</code> (protocol) coexist -- the same pattern Swift Data uses with <code>@Model</code>/<code>Model</code>. Xcode may show a warning about the name overlap; it compiles and runs correctly.</p>
         </div>
       </div>
 
@@ -101,7 +101,7 @@ struct ProductReview {
     let summary: String       // required
     let pros: [String]        // required
     let cons: [String]        // required
-    let verdict: String?      // optional — model may skip
+    let verdict: String?      // optional -- model may skip
 }</code></pre>
       </div>
 
@@ -144,7 +144,7 @@ print("\(report.city): \(report.temperature)°C, \(report.condition)")</code></p
       <p>The macro maps unknown types to <code>{"type":"object"}</code> without a nested schema. For structs with nested types, define <code>jsonSchema</code> manually to give the model the full schema:</p>
       <div class="code-block">
         <div class="code-header"><span class="code-lang">Swift</span></div>
-        <pre><code class="language-swift">// Nested type — define manually so the schema is complete
+        <pre><code class="language-swift">// Nested type -- define manually so the schema is complete
 struct OrderSummary: StructuredOutput {
     struct LineItem: Codable {
         let product: String
