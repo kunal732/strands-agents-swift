@@ -17,19 +17,55 @@
     <article>
       <div class="breadcrumb"><a href="index.html">Home</a><span class="breadcrumb-sep">›</span>Multi-Agent</div>
       <h1>Multi-Agent</h1>
-      <p class="page-description">A single agent handles one task at a time. Multi-agent lets you run several specialized agents inside your app — each focused on one thing — and combine their results. All agents run in the same process on the same device.</p>
+      <p class="page-description">Multi-agent is a pattern for building more capable apps. Instead of one general-purpose agent, you build a team of specialists — each owning one domain of your app — and let them coordinate. All agents run on device, in the same process, with access to the same Apple APIs.</p>
 
-      <h2 id="why-multi-agent">Why Multi-Agent?</h2>
-      <p>A single agent handles one task at a time with one context window. Multi-agent systems let you:</p>
-      <ul>
-        <li><strong>Specialize</strong> — give each agent a focused system prompt and only the tools it needs</li>
-        <li><strong>Parallelize</strong> — run independent subtasks at the same time, on device</li>
-        <li><strong>Compose</strong> — chain the output of one agent into the input of another</li>
-        <li><strong>Bridge</strong> — delegate heavy work from your on-device agent to a backend agent your team hosts</li>
-      </ul>
+      <h2 id="mental-model">The Mental Model</h2>
+      <p>Think of each agent as a department head in your app. Your calendar agent knows EventKit deeply. Your health agent knows HealthKit. Your notes agent knows your document schema. A coordinator routes the user's natural language request to whoever is best equipped to handle it.</p>
+      <p>This mirrors how you already structure large Apple platform apps — services own specific data sources, view controllers own specific domains. Multi-agent applies the same separation of concerns to AI reasoning.</p>
+
+      <div class="flow">
+        <div class="flow-row">
+          <span class="flow-node blue">User: "What should I focus on today?"</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-node">coordinator</span>
+        </div>
+        <div class="flow-row" style="margin-top:0.5rem; padding-left: 15rem;">
+          <span class="flow-arrow">→</span>
+          <span class="flow-node purple">calendar agent</span>
+          <span class="flow-label" style="margin-left:0.5rem">(reads EventKit)</span>
+        </div>
+        <div class="flow-row" style="padding-left: 15rem;">
+          <span class="flow-arrow">→</span>
+          <span class="flow-node purple">health agent</span>
+          <span class="flow-label" style="margin-left:0.5rem">(reads HealthKit)</span>
+        </div>
+        <div class="flow-row" style="padding-left: 15rem;">
+          <span class="flow-arrow">→</span>
+          <span class="flow-node purple">tasks agent</span>
+          <span class="flow-label" style="margin-left:0.5rem">(reads Reminders)</span>
+        </div>
+        <div class="flow-row" style="margin-top:0.5rem;">
+          <span class="flow-arrow" style="margin-left: 15rem;">→ synthesize →</span>
+          <span class="flow-node green">Final answer</span>
+        </div>
+      </div>
+
+      <h2 id="why-multi-agent">Why Multi-Agent on Apple Platforms?</h2>
+
+      <h3 id="specialization">Specialization over generalization</h3>
+      <p>A single agent given access to every API in your app has a sprawling system prompt and inconsistent behavior. A focused agent with one system prompt, one set of tools, and one domain performs better and is easier to debug. Give your calendar agent only calendar tools. Give your health agent only HealthKit tools. They only need to be good at one thing.</p>
+
+      <h3 id="parallelism">Apple Silicon handles concurrency well</h3>
+      <p>Independent agents run concurrently using Swift structured concurrency. On a Mac or iPhone with Apple Silicon, multiple inference calls or API lookups running simultaneously is fast. A meeting transcript can be analyzed by a "find action items" agent, a "find decisions" agent, and a "find open questions" agent all at once — then their results are merged into a single summary.</p>
+
+      <h3 id="privacy">Sensitive data stays on device</h3>
+      <p>HealthKit records, Calendar events, Messages, location history — none of it leaves the device when your agents run locally. Each specialist agent can have precisely scoped access to the system data it needs, and nothing it doesn't. Multi-agent doesn't change the privacy model; it reinforces it by keeping each agent's scope narrow.</p>
+
+      <h3 id="bridge">Bridge to your backend when needed</h3>
+      <p>For tasks that genuinely need server compute — processing a large file, running a specialized model, calling an internal API — one agent can delegate to a backend agent your team hosts, while the rest of the work stays on device.</p>
 
       <h2 id="coordination-models">Coordination Models</h2>
-      <p>There are three ways to coordinate agents, each suited to a different kind of problem:</p>
+      <p>There are three ways to coordinate agents. Choose based on whether you know the steps ahead of time, whether routing depends on user intent, or whether any agents live off-device:</p>
 
       <div class="comparison-grid">
         <a class="comparison-card card" href="multi-agent-graph.html" style="text-decoration:none;">
@@ -66,41 +102,52 @@
 
       <h2 id="choosing-a-model">Choosing a Coordination Model</h2>
       <table>
-        <thead><tr><th>Question</th><th>Answer → Use</th></tr></thead>
+        <thead><tr><th>Situation</th><th>Use</th></tr></thead>
         <tbody>
-          <tr><td>Do I know all the steps in advance?</td><td>Yes → <a href="multi-agent-graph.html">Graph</a></td></tr>
-          <tr><td>Should some steps run in parallel on device?</td><td>Yes → <a href="multi-agent-graph.html">Graph</a></td></tr>
-          <tr><td>Does routing depend on what the user actually asked?</td><td>Yes → <a href="multi-agent-swarm.html">Swarm</a></td></tr>
-          <tr><td>Is one task too heavy or private to run on device?</td><td>Yes → <a href="multi-agent-a2a.html">A2A</a></td></tr>
-          <tr><td>Does my backend team use Python or TypeScript Strands?</td><td>Yes → <a href="multi-agent-a2a.html">A2A</a></td></tr>
+          <tr><td>You want to analyze the same data multiple ways simultaneously (HealthKit summary, meeting transcript, photo library)</td><td><a href="multi-agent-graph.html">Graph</a></td></tr>
+          <tr><td>You're building a natural language assistant that covers multiple domains (calendar, notes, tasks)</td><td><a href="multi-agent-swarm.html">Swarm</a></td></tr>
+          <tr><td>A task is too compute-heavy for on-device, or needs a model only your backend runs</td><td><a href="multi-agent-a2a.html">A2A</a></td></tr>
+          <tr><td>Your backend team uses Python or TypeScript Strands and you want to call their agent from your app</td><td><a href="multi-agent-a2a.html">A2A</a></td></tr>
         </tbody>
       </table>
 
       <h2 id="agents-as-tools">Agents as Tools</h2>
-      <p>All three models build on the same primitive: an agent can use another agent as a tool. The outer agent calls the inner agent just like any other tool call — it doesn't need to know how the inner agent works.</p>
+      <p>All three models share the same underlying primitive: an agent can call another agent as a tool. The outer agent invokes the inner agent exactly like any other tool call — it doesn't need to know what the inner agent does internally.</p>
+      <p>This is how you build an assistant that spans multiple Apple frameworks without creating one agent that knows everything:</p>
       <div class="code-block">
-        <div class="code-header"><span class="code-label">Writing assistant using a grammar agent as a tool</span><span class="code-lang">Swift</span></div>
-        <pre><code class="language-swift">// A specialized agent that checks grammar and style
-let grammarAgent = Agent(
+        <div class="code-header"><span class="code-label">Daily briefing assistant</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">// Each specialist owns one Apple framework
+let calendarAgent = Agent(
     model: provider,
-    systemPrompt: "You are a grammar expert. Review the text and return a concise list of corrections."
+    tools: [readCalendarEvents, checkAvailability],
+    systemPrompt: "Read today's EventKit calendar and summarize the schedule and any conflicts."
 )
 
-// Wrap it as a tool the outer agent can call
-let grammarTool = AgentTool(
-    name: "grammar_check",
-    description: "Check grammar and style in a passage of text and return corrections",
-    agent: grammarAgent
-)
-
-// The writing assistant uses the grammar agent as one of its tools
-let writingAssistant = Agent(
+let healthAgent = Agent(
     model: provider,
-    tools: [grammarTool, suggestTitle],
-    systemPrompt: "You help users improve their writing. Use the grammar_check tool to catch errors, then provide overall feedback."
+    tools: [readSleepData, readActivityRings, readHeartRate],
+    systemPrompt: "Read today's HealthKit data and summarize sleep quality, activity, and anything worth noting."
 )
 
-let result = try await writingAssistant.run("Review my draft: \(userDraft)")</code></pre>
+let tasksAgent = Agent(
+    model: provider,
+    tools: [listReminders, listIncompleteItems],
+    systemPrompt: "Read the Reminders store and summarize overdue and high-priority tasks."
+)
+
+// Wrap each specialist as a tool
+let calendarTool = AgentTool(name: "check_calendar", description: "Get today's schedule from Calendar",  agent: calendarAgent)
+let healthTool   = AgentTool(name: "check_health",   description: "Get today's health summary from HealthKit", agent: healthAgent)
+let tasksTool    = AgentTool(name: "check_tasks",    description: "Get overdue and high-priority Reminders",   agent: tasksAgent)
+
+// The briefing agent calls all three and combines their output
+let briefingAgent = Agent(
+    model: provider,
+    tools: [calendarTool, healthTool, tasksTool],
+    systemPrompt: "You give the user a concise morning briefing. Call all three tools and synthesize their outputs into a prioritized plan for the day."
+)
+
+let briefing = try await briefingAgent.run("Good morning — what should I focus on today?")</code></pre>
       </div>
 
       <h2 id="next-steps">Deep Dives</h2>
