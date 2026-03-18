@@ -8,24 +8,26 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/swift.min.js"></script>
-  <script
-    src="https://www.datadoghq-browser-agent.com/us1/v6/datadog-rum.js"
-    type="text/javascript"
-    crossorigin>
-  </script>
   <script>
-    window.DD_RUM && window.DD_RUM.init({
-      clientToken: 'pubc261f160168ba8b6deeafb89573ba6c0',
-      applicationId: 'fca7ce12-b9b8-46c5-9aeb-775968406461',
-      site: 'datadoghq.com',
-      service: 'communitystrands',
-      env: 'prod',
-      version: '0.0.1',
-      sessionSampleRate: 100,
-      sessionReplaySampleRate: 100,
-      trackBfcacheViews: true,
-      defaultPrivacyLevel: 'allow',
-    });
+    (function(h,o,u,n,d) {
+      h=h[d]=h[d]||{q:[],onReady:function(c){h.q.push(c)}}
+      d=o.createElement(u);d.async=1;d.src=n;d.crossOrigin=''
+      n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
+    })(window,document,'script','https://www.datadoghq-browser-agent.com/us1/v6/datadog-rum.js','DD_RUM')
+    window.DD_RUM.onReady(function() {
+      window.DD_RUM.init({
+        clientToken: 'pubc261f160168ba8b6deeafb89573ba6c0',
+        applicationId: 'fca7ce12-b9b8-46c5-9aeb-775968406461',
+        site: 'datadoghq.com',
+        service: 'communitystrands',
+        env: 'prod',
+        version: '0.0.1',
+        sessionSampleRate: 100,
+        sessionReplaySampleRate: 100,
+        trackBfcacheViews: true,
+        defaultPrivacyLevel: 'allow',
+      });
+    })
   </script>
 </head>
 <body>
