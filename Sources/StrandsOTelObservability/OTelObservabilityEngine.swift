@@ -39,7 +39,28 @@ public final class OTelObservabilityEngine: StrandsAgents.ObservabilityEngine, @
         name: String,
         attributes: [String: String]
     ) -> StrandsAgents.SpanContext {
+        buildSpan(name: name, attributes: attributes, parentSpan: nil)
+    }
+
+    public func startChildSpan(
+        name: String,
+        attributes: [String: String],
+        parentId: String
+    ) -> StrandsAgents.SpanContext {
+        let parent = lock.withLock { activeSpans[parentId] }
+        return buildSpan(name: name, attributes: attributes, parentSpan: parent)
+    }
+
+    private func buildSpan(
+        name: String,
+        attributes: [String: String],
+        parentSpan: OpenTelemetryApi.Span?
+    ) -> StrandsAgents.SpanContext {
         let spanBuilder = tracer.spanBuilder(spanName: name)
+
+        if let parent = parentSpan {
+            spanBuilder.setParent(parent.context)
+        }
 
         for (key, value) in attributes {
             let redacted = redactor?.redact(value) ?? value

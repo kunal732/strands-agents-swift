@@ -20,40 +20,123 @@
       <p class="page-description">Traces, metrics, and hooks give you visibility into every agent run: token counts, per-cycle latency, and tool execution.</p>
 
       <h2 id="opentelemetry">OpenTelemetry Tracing</h2>
-      <p>Add <code>StrandsOTelObservability</code> to your target and pass an <code>OTelObservabilityEngine</code> when creating the agent. Every agent run produces a trace with spans for each model invocation and tool call.</p>
+      <p>The SDK emits structured traces using the <a href="https://opentelemetry.io/docs/specs/semconv/gen-ai/" target="_blank">OpenTelemetry GenAI semantic conventions</a>. Every agent run produces a connected trace tree with parent-child span relationships, token counts, latency, and tool results.</p>
+
+      <h3 id="span-hierarchy">Span hierarchy</h3>
+      <p>Each run produces a trace with this structure:</p>
+      <div class="flow">
+        <div class="flow-row">
+          <span class="flow-node blue">invoke_agent</span>
+          <span class="flow-label" style="margin-left:0.5rem">root span for the full run</span>
+        </div>
+        <div class="flow-row" style="padding-left:1.5rem">
+          <span class="flow-arrow">↳</span>
+          <span class="flow-node purple" style="margin-left:0.35rem">execute_event_loop_cycle</span>
+          <span class="flow-label" style="margin-left:0.5rem">one per reasoning cycle</span>
+        </div>
+        <div class="flow-row" style="padding-left:3.5rem">
+          <span class="flow-arrow">↳</span>
+          <span class="flow-node" style="margin-left:0.35rem">chat</span>
+          <span class="flow-label" style="margin-left:0.5rem">model call with token counts</span>
+        </div>
+        <div class="flow-row" style="padding-left:3.5rem">
+          <span class="flow-arrow">↳</span>
+          <span class="flow-node green" style="margin-left:0.35rem">execute_tool &lt;name&gt;</span>
+          <span class="flow-label" style="margin-left:0.5rem">one per tool call (concurrent tools run in parallel)</span>
+        </div>
+      </div>
+
+      <h3 id="span-attributes">Span attributes</h3>
+      <table>
+        <thead><tr><th>Attribute</th><th>Where set</th></tr></thead>
+        <tbody>
+          <tr><td><code>gen_ai.operation.name</code></td><td>All spans</td></tr>
+          <tr><td><code>gen_ai.request.model</code></td><td><code>chat</code> span</td></tr>
+          <tr><td><code>gen_ai.usage.input_tokens</code></td><td><code>gen_ai.choice</code> event on <code>chat</code></td></tr>
+          <tr><td><code>gen_ai.usage.output_tokens</code></td><td><code>gen_ai.choice</code> event on <code>chat</code></td></tr>
+          <tr><td><code>gen_ai.usage.total_tokens</code></td><td><code>gen_ai.choice</code> event on <code>chat</code></td></tr>
+          <tr><td><code>gen_ai.tool.name</code></td><td><code>execute_tool</code> span</td></tr>
+          <tr><td><code>gen_ai.tool.call.id</code></td><td><code>execute_tool</code> span</td></tr>
+          <tr><td><code>gen_ai.tool.status</code></td><td><code>gen_ai.choice</code> event on tool span</td></tr>
+          <tr><td><code>event_loop.cycle_id</code></td><td><code>execute_event_loop_cycle</code> span</td></tr>
+          <tr><td><code>finish_reason</code></td><td><code>gen_ai.choice</code> event on <code>chat</code></td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="datadog">Sending to Datadog LLM Observability</h2>
+      <p>Point the OTLP exporter at Datadog's intake endpoint. The SDK emits GenAI semantic conventions that Datadog's LLM Observability product reads natively.</p>
+
       <div class="code-block">
-        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <div class="code-header"><span class="code-label">Package.swift</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">.target(
+    name: "MyApp",
+    dependencies: [
+        .product(name: "StrandsAgents",           package: "strands-agents-swift"),
+        .product(name: "StrandsBedrockProvider",   package: "strands-agents-swift"),
+        .product(name: "StrandsOTelObservability", package: "strands-agents-swift"),
+    ]
+)</code></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Datadog OTLP configuration</span><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">import StrandsAgents
+import StrandsBedrockProvider
 import StrandsOTelObservability
 import OpenTelemetryApi
 import OpenTelemetrySdk
+import OpenTelemetryProtocolExporterHTTP
 
-// Configure your OTel exporter (Datadog, Jaeger, OTLP, etc.)
-let exporter = OtlpGrpcTraceExporter(endpoint: "http://localhost:4317")
+let ddApiKey = ProcessInfo.processInfo.environment["DD_API_KEY"] ?? ""
+
+// Configure the OTLP/HTTP exporter pointed at Datadog's intake
+let configuration = OtlpConfiguration(
+    endpoint: "https://otlp.datadoghq.com/v1/traces",
+    headers: [
+        ("dd-api-key", ddApiKey),
+        ("dd-otlp-source", "llmobs"),
+    ]
+)
+let exporter = OtlpHttpTraceExporter(configuration: configuration)
+
 let tracerProvider = TracerProviderBuilder()
-    .add(spanProcessor: SimpleSpanProcessor(spanExporter: exporter))
+    .add(spanProcessor: BatchSpanProcessor(spanExporter: exporter))
     .build()
 OpenTelemetry.registerTracerProvider(tracerProvider: tracerProvider)
 
-let tracer = tracerProvider.get(instrumentationName: "my-app", instrumentationVersion: "1.0")
+let tracer = tracerProvider.get(
+    instrumentationName: "my-app",
+    instrumentationVersion: "1.0"
+)
 
+// Pass the engine to your agent
 let agent = Agent(
-    model: provider,
-    tools: [myTools],
+    model: try BedrockProvider(config: BedrockConfig(
+        modelId: "us.anthropic.claude-sonnet-4-20250514-v1:0"
+    )),
+    tools: [myTool],
     observability: OTelObservabilityEngine(tracer: tracer)
 )
 
-let result = try await agent.run("Analyze this dataset")</code></pre>
+let result = try await agent.run("What is 42 * 17?")
+// Traces appear in Datadog LLM Observability within seconds</code></pre>
       </div>
 
-      <h3 id="backends">Supported backends</h3>
+      <div class="callout callout-note">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body">
+          <p>For EU accounts, use <code>https://otlp.datadoghq.eu/v1/traces</code> as the endpoint. The <code>dd-otlp-source: llmobs</code> header routes spans into the LLM Observability product specifically.</p>
+        </div>
+      </div>
+
+      <h3 id="backends">Other supported backends</h3>
       <table>
-        <thead><tr><th>Backend</th><th>Notes</th></tr></thead>
+        <thead><tr><th>Backend</th><th>Exporter</th></tr></thead>
         <tbody>
-          <tr><td>Datadog</td><td>Uses <code>gen_ai</code> semantic conventions, compatible with LLM Observability</td></tr>
-          <tr><td>Jaeger</td><td>Open-source distributed tracing</td></tr>
-          <tr><td>AWS X-Ray</td><td>Requires the X-Ray OTLP receiver</td></tr>
-          <tr><td>Any OTLP backend</td><td>Standard OpenTelemetry Protocol</td></tr>
+          <tr><td>Datadog LLM Observability</td><td><code>OtlpHttpTraceExporter</code> to <code>otlp.datadoghq.com</code></td></tr>
+          <tr><td>Jaeger</td><td><code>OtlpGrpcTraceExporter</code> to your Jaeger instance</td></tr>
+          <tr><td>AWS X-Ray</td><td><code>OtlpGrpcTraceExporter</code> to the X-Ray OTLP receiver</td></tr>
+          <tr><td>Any OTLP backend</td><td>Any <code>SpanExporter</code> from <code>opentelemetry-swift</code></td></tr>
         </tbody>
       </table>
 

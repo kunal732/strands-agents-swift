@@ -66,7 +66,8 @@ struct AgentLoop: Sendable {
                 messages: messages,
                 systemPrompt: systemPrompt,
                 toolChoice: toolChoice,
-                cycleCount: cycleCount
+                cycleCount: cycleCount,
+                parentSpanId: invocationSpan.id
             )
 
             accumulateUsage(&totalUsage, from: aggregated.usage)
@@ -132,14 +133,16 @@ struct AgentLoop: Sendable {
             if parallelToolExecution && toolUses.count > 1 {
                 toolResultContents = try await executeToolsParallelWithMetrics(
                     toolUses: toolUses, messages: messages,
-                    systemPrompt: systemPrompt, toolLatencies: &toolLatencies
+                    systemPrompt: systemPrompt, toolLatencies: &toolLatencies,
+                    parentSpanId: cycleSpan.id
                 )
             } else {
                 var results: [ContentBlock] = []
                 for toolUse in toolUses {
                     let toolCallStart = Date()
                     let result = try await executeSingleTool(
-                        toolUse: toolUse, messages: messages, systemPrompt: systemPrompt
+                        toolUse: toolUse, messages: messages, systemPrompt: systemPrompt,
+                        parentSpanId: cycleSpan.id
                     )
                     results.append(.toolResult(result))
                     toolLatencies[toolUse.name] = Int(Date().timeIntervalSince(toolCallStart) * 1000)
@@ -213,6 +216,7 @@ struct AgentLoop: Sendable {
                 systemPrompt: systemPrompt,
                 toolChoice: toolChoice,
                 cycleCount: cycleCount,
+                parentSpanId: invocationSpan.id,
                 yield: yield
             )
 
@@ -267,14 +271,16 @@ struct AgentLoop: Sendable {
             if parallelToolExecution && toolUses.count > 1 {
                 toolResultContents = try await executeToolsParallelWithMetrics(
                     toolUses: toolUses, messages: messages,
-                    systemPrompt: systemPrompt, toolLatencies: &toolLatencies
+                    systemPrompt: systemPrompt, toolLatencies: &toolLatencies,
+                    parentSpanId: cycleSpan.id
                 )
             } else {
                 var results: [ContentBlock] = []
                 for toolUse in toolUses {
                     let start = Date()
                     let result = try await executeSingleTool(
-                        toolUse: toolUse, messages: messages, systemPrompt: systemPrompt
+                        toolUse: toolUse, messages: messages, systemPrompt: systemPrompt,
+                        parentSpanId: cycleSpan.id
                     )
                     results.append(.toolResult(result))
                     toolLatencies[toolUse.name] = Int(Date().timeIntervalSince(start) * 1000)
@@ -318,14 +324,16 @@ struct AgentLoop: Sendable {
     // MARK: - Model Cycle with Metrics
 
     private func runModelCycleWithMetrics(
-        messages: [Message], systemPrompt: String?, toolChoice: ToolChoice?, cycleCount: Int
+        messages: [Message], systemPrompt: String?, toolChoice: ToolChoice?, cycleCount: Int,
+        parentSpanId: String
     ) async throws -> (StreamAggregator.AggregatedResult, SpanContext, Int, Int?, String?) {
-        let cycleSpan = observability.startSpan(
+        let cycleSpan = observability.startChildSpan(
             name: GenAISpanNames.eventLoopCycle,
             attributes: [
                 GenAIAttributes.eventLoopCycleId: "\(cycleCount)",
                 GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
-            ]
+            ],
+            parentId: parentSpanId
         )
 
         let toolSpecs = toolRegistry.count > 0 ? toolRegistry.toolSpecs : nil
@@ -334,13 +342,14 @@ struct AgentLoop: Sendable {
 
         try await hookRegistry.invoke(BeforeModelCallEvent(messages: normalizedMessages, toolSpecs: toolSpecs))
 
-        let modelSpan = observability.startSpan(
+        let modelSpan = observability.startChildSpan(
             name: GenAISpanNames.chat,
             attributes: [
                 GenAIAttributes.operationName: "chat",
                 GenAIAttributes.requestModel: provider.modelId ?? "unknown",
                 GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
-            ]
+            ],
+            parentId: cycleSpan.id
         )
 
         let modelStart = Date()
@@ -388,14 +397,16 @@ struct AgentLoop: Sendable {
 
     private func runModelCycleStreamingWithMetrics(
         messages: [Message], systemPrompt: String?, toolChoice: ToolChoice?, cycleCount: Int,
+        parentSpanId: String,
         yield: @escaping @Sendable (AgentStreamEvent) async -> Void
     ) async throws -> (StreamAggregator.AggregatedResult, SpanContext, Int, Int?, String?) {
-        let cycleSpan = observability.startSpan(
+        let cycleSpan = observability.startChildSpan(
             name: GenAISpanNames.eventLoopCycle,
             attributes: [
                 GenAIAttributes.eventLoopCycleId: "\(cycleCount)",
                 GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
-            ]
+            ],
+            parentId: parentSpanId
         )
 
         let toolSpecs = toolRegistry.count > 0 ? toolRegistry.toolSpecs : nil
@@ -404,13 +415,14 @@ struct AgentLoop: Sendable {
 
         try await hookRegistry.invoke(BeforeModelCallEvent(messages: normalizedMessages, toolSpecs: toolSpecs))
 
-        let modelSpan = observability.startSpan(
+        let modelSpan = observability.startChildSpan(
             name: GenAISpanNames.chat,
             attributes: [
                 GenAIAttributes.operationName: "chat",
                 GenAIAttributes.requestModel: provider.modelId ?? "unknown",
                 GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
-            ]
+            ],
+            parentId: cycleSpan.id
         )
 
         let modelStart = Date()
@@ -467,16 +479,16 @@ struct AgentLoop: Sendable {
         return try await router.route(context: ctx)
     }
 
-    private func executeTools(toolUses: [ToolUseBlock], messages: [Message], systemPrompt: String?) async throws -> [ContentBlock] {
+    private func executeTools(toolUses: [ToolUseBlock], messages: [Message], systemPrompt: String?, parentSpanId: String) async throws -> [ContentBlock] {
         if parallelToolExecution && toolUses.count > 1 {
             var latencies: [String: Int] = [:]
             return try await executeToolsParallelWithMetrics(
-                toolUses: toolUses, messages: messages, systemPrompt: systemPrompt, toolLatencies: &latencies
+                toolUses: toolUses, messages: messages, systemPrompt: systemPrompt, toolLatencies: &latencies, parentSpanId: parentSpanId
             )
         }
         var results: [ContentBlock] = []
         for toolUse in toolUses {
-            let result = try await executeSingleTool(toolUse: toolUse, messages: messages, systemPrompt: systemPrompt)
+            let result = try await executeSingleTool(toolUse: toolUse, messages: messages, systemPrompt: systemPrompt, parentSpanId: parentSpanId)
             results.append(.toolResult(result))
         }
         return results
@@ -484,14 +496,15 @@ struct AgentLoop: Sendable {
 
     private func executeToolsParallelWithMetrics(
         toolUses: [ToolUseBlock], messages: [Message], systemPrompt: String?,
-        toolLatencies: inout [String: Int]
+        toolLatencies: inout [String: Int], parentSpanId: String
     ) async throws -> [ContentBlock] {
         let results = try await withThrowingTaskGroup(of: (Int, ToolResultBlock, String, Int).self) { group in
             for (index, toolUse) in toolUses.enumerated() {
                 group.addTask {
                     let start = Date()
                     let result = try await self.executeSingleTool(
-                        toolUse: toolUse, messages: messages, systemPrompt: systemPrompt
+                        toolUse: toolUse, messages: messages, systemPrompt: systemPrompt,
+                        parentSpanId: parentSpanId
                     )
                     let latency = Int(Date().timeIntervalSince(start) * 1000)
                     return (index, result, toolUse.name, latency)
@@ -509,15 +522,16 @@ struct AgentLoop: Sendable {
         return results.sorted { $0.0 < $1.0 }.map { .toolResult($0.1) }
     }
 
-    private func executeSingleTool(toolUse: ToolUseBlock, messages: [Message], systemPrompt: String?) async throws -> ToolResultBlock {
-        let toolSpan = observability.startSpan(
+    private func executeSingleTool(toolUse: ToolUseBlock, messages: [Message], systemPrompt: String?, parentSpanId: String) async throws -> ToolResultBlock {
+        let toolSpan = observability.startChildSpan(
             name: "\(GenAISpanNames.executeTool) \(toolUse.name)",
             attributes: [
                 GenAIAttributes.operationName: "execute_tool",
                 GenAIAttributes.toolName: toolUse.name,
                 GenAIAttributes.toolCallId: toolUse.toolUseId,
                 GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
-            ]
+            ],
+            parentId: parentSpanId
         )
         try await hookRegistry.invoke(BeforeToolCallEvent(toolUse: toolUse))
 

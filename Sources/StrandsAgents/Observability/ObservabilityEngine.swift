@@ -5,8 +5,16 @@ import Foundation
 /// All agent loop iterations, model calls, tool calls, and routing decisions
 /// are instrumented through this interface.
 public protocol ObservabilityEngine: Sendable {
-    /// Start a new span.
+    /// Start a new root span.
     func startSpan(name: String, attributes: [String: String]) -> SpanContext
+
+    /// Start a child span nested under a parent span.
+    ///
+    /// Implementations that support trace hierarchies (e.g. OTel) should
+    /// link the new span to the parent so the full trace tree is visible in
+    /// Datadog and other backends. The default implementation falls back to
+    /// `startSpan`, which produces a root span (no hierarchy).
+    func startChildSpan(name: String, attributes: [String: String], parentId: String) -> SpanContext
 
     /// End a span.
     func endSpan(_ context: SpanContext, status: SpanStatus)
@@ -16,6 +24,14 @@ public protocol ObservabilityEngine: Sendable {
 
     /// Record a metric value.
     func recordMetric(name: String, value: Double, unit: String?, attributes: [String: String])
+}
+
+extension ObservabilityEngine {
+    /// Default: ignore the parent and start a root span.
+    /// Override in concrete engines to produce proper trace hierarchies.
+    public func startChildSpan(name: String, attributes: [String: String], parentId: String) -> SpanContext {
+        startSpan(name: name, attributes: attributes)
+    }
 }
 
 /// An opaque context for an active span.
