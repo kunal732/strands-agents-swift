@@ -129,7 +129,7 @@ func calculator(expression: String) -> String {
 let agent = Agent(model: provider, tools: [wordCount, calculator])
 ```
 
-`@Tool` functions are still regular Swift functions -- you can call them directly:
+`@Tool` functions are still regular Swift functions - you can call them directly:
 
 ```swift
 let count = wordCount(text: "hello world")  // 2
@@ -175,7 +175,7 @@ Tools requested in the same turn run concurrently by default.
 
 `runStructured` forces the model to produce JSON matching a schema you define, then decodes it directly into your Swift type. Under the hood it registers a hidden tool whose input schema is your type's `jsonSchema`; the model must call that tool to respond, guaranteeing the output is valid and decodable.
 
-Apply `@StructuredOutput` to a `Codable` struct -- the macro synthesizes the JSON schema automatically. Then call `agent.runStructured(prompt)`; the return type is inferred from context.
+Apply `@StructuredOutput` to a `Codable` struct - the macro synthesizes the JSON schema automatically. Then call `agent.runStructured(prompt)`; the return type is inferred from context.
 
 ```swift
 @StructuredOutput
@@ -183,7 +183,7 @@ struct Recipe {
     let name: String
     let ingredients: [String]
     let steps: [String]
-    let note: String?   // optional -- omitted from "required"
+    let note: String?   // optional - omitted from "required"
 }
 
 let agent = Agent(model: provider)
@@ -218,19 +218,19 @@ struct WeatherReport: StructuredOutput {
 
 ## Multi-Agent
 
-A single agent handles one task at a time. Multi-agent systems let you break a complex task into pieces and assign each piece to a specialized agent -- one might search the web, another might write prose, another might review code. The agents coordinate so the final result is better than any one agent could produce alone.
+A single agent handles one task at a time. Multi-agent systems let you break a complex task into pieces and assign each piece to a specialized agent - one might search the web, another might write prose, another might review code. The agents coordinate so the final result is better than any one agent could produce alone.
 
 There are three coordination models, each suited to a different kind of workflow:
 
 | Model | When to use |
 |-------|-------------|
 | **Graph** | The steps are known up front and some can run in parallel |
-| **Swarm** | The routing logic is dynamic -- agents decide at runtime who handles what |
+| **Swarm** | The routing logic is dynamic - agents decide at runtime who handles what |
 | **A2A** | Agents live in different processes or services and communicate over HTTP |
 
 ---
 
-### Graph -- fixed pipeline with parallel steps
+### Graph - fixed pipeline with parallel steps
 
 Each agent is a node. You declare which nodes depend on which, and the orchestrator runs independent nodes in parallel while dependent nodes wait. Use this when you know the workflow ahead of time.
 
@@ -254,7 +254,7 @@ print(result.output)  // final output from the "write" node
 
 ---
 
-### Swarm -- agents hand off to each other at runtime
+### Swarm - agents hand off to each other at runtime
 
 Execution starts at an entry-point agent. Any agent can hand off to another by name when it decides it is not the right agent for the current step. Use this when the task is open-ended and you cannot predict the routing in advance.
 
@@ -280,7 +280,7 @@ print(result.output)
 
 ---
 
-### A2A -- agents across process or network boundaries
+### A2A - agents across process or network boundaries
 
 A2A (Agent-to-Agent) lets agents in separate processes or services talk to each other over HTTP. You serve an agent as an endpoint with `A2AServer`; other agents call it via `A2AClient`, which looks like an ordinary tool to the calling agent. Nothing about how you define agents changes.
 
@@ -420,9 +420,9 @@ Per-message persistence with atomic writes, version tracking, and broken history
 | `StrandsAgents` | Core: agent, tools, hooks, multi-agent, session, MCP | Foundation |
 | `StrandsBedrockProvider` | AWS Bedrock ConverseStream | aws-sdk-swift |
 | `StrandsMLXProvider` | On-device LLM inference | mlx-swift-lm |
-| `StrandsAnthropicProvider` | Anthropic Messages API | -- |
-| `StrandsOpenAIProvider` | OpenAI Chat Completions | -- |
-| `StrandsGeminiProvider` | Google Gemini API | -- |
+| `StrandsAnthropicProvider` | Anthropic Messages API | - |
+| `StrandsOpenAIProvider` | OpenAI Chat Completions | - |
+| `StrandsGeminiProvider` | Google Gemini API | - |
 | `StrandsOTelObservability` | OpenTelemetry tracing | opentelemetry-swift |
 | `StrandsBidiStreaming` | Voice agent protocols + cloud backends | aws-sdk-swift |
 | `StrandsMLXBidiProvider` | Local STT/TTS/VAD pipeline | mlx-audio-swift |
@@ -433,18 +433,18 @@ Per-message persistence with atomic writes, version tracking, and broken history
 |---------|-----------|---------|----------|
 | Core agent + tools | Yes | Yes | Yes |
 | Cloud providers | Yes | Yes | Yes |
-| MLX local inference | Apple Silicon | -- | -- |
-| Voice agents (cloud) | Yes | Yes | -- |
-| Voice agents (local) | Apple Silicon | -- | -- |
+| MLX local inference | Apple Silicon | - | - |
+| Voice agents (cloud) | Yes | Yes | - |
+| Voice agents (local) | Apple Silicon | - | - |
 
 ## Acknowledgments
 
-- [Strands Agents](https://github.com/strands-agents) by AWS -- the Python and TypeScript SDKs this implementation is based on
-- [MLX Swift](https://github.com/ml-explore/mlx-swift) and [MLX Swift LM](https://github.com/ml-explore/mlx-swift-lm) by Apple -- on-device ML framework
-- [MLX Audio Swift](https://github.com/Blaizzy/mlx-audio-swift) by [Prince Canuma](https://github.com/Blaizzy) -- speech-to-text, text-to-speech, and voice activity detection
-- [AWS SDK for Swift](https://github.com/awslabs/aws-sdk-swift) -- Bedrock Runtime client
-- [OpenTelemetry Swift](https://github.com/open-telemetry/opentelemetry-swift) -- distributed tracing
-- [Swift Transformers](https://github.com/huggingface/swift-transformers) by Hugging Face -- tokenizer support
+- [Strands Agents](https://github.com/strands-agents) by AWS - the Python and TypeScript SDKs this implementation is based on
+- [MLX Swift](https://github.com/ml-explore/mlx-swift) and [MLX Swift LM](https://github.com/ml-explore/mlx-swift-lm) by Apple - on-device ML framework
+- [MLX Audio Swift](https://github.com/Blaizzy/mlx-audio-swift) by [Prince Canuma](https://github.com/Blaizzy) - speech-to-text, text-to-speech, and voice activity detection
+- [AWS SDK for Swift](https://github.com/awslabs/aws-sdk-swift) - Bedrock Runtime client
+- [OpenTelemetry Swift](https://github.com/open-telemetry/opentelemetry-swift) - distributed tracing
+- [Swift Transformers](https://github.com/huggingface/swift-transformers) by Hugging Face - tokenizer support
 
 ## License
 
