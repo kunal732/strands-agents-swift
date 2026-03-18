@@ -1,0 +1,11 @@
+Strands Agents Swift SDK
+Copyright 2025 Kunal Batra
+
+This product is a community Swift implementation of the Strands Agents SDK,
+based on the original work by Amazon.com, Inc. and its affiliates.
+
+The original Strands Agents SDK (Python and TypeScript) is available at:
+https://github.com/strands-agents
+
+Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+Licensed under the Apache License, Version 2.0.
