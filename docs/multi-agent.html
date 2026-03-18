@@ -50,20 +50,6 @@
         </div>
       </div>
 
-      <h2 id="why-multi-agent">Why Multi-Agent on Apple Platforms?</h2>
-
-      <h3 id="specialization">Specialization over generalization</h3>
-      <p>A single agent given access to every API in your app has a sprawling system prompt and inconsistent behavior. A focused agent with one system prompt, one set of tools, and one domain performs better and is easier to debug. Give your calendar agent only calendar tools. Give your health agent only HealthKit tools. They only need to be good at one thing.</p>
-
-      <h3 id="parallelism">Apple Silicon handles concurrency well</h3>
-      <p>Independent agents run concurrently using Swift structured concurrency. On a Mac or iPhone with Apple Silicon, multiple inference calls or API lookups running simultaneously is fast. A meeting transcript can be analyzed by a "find action items" agent, a "find decisions" agent, and a "find open questions" agent all at once. Their results are then merged into a single summary.</p>
-
-      <h3 id="privacy">Sensitive data stays on device</h3>
-      <p>HealthKit records, Calendar events, Messages, and location history never leave the device when your agents run locally. Each specialist agent can have precisely scoped access to the system data it needs, and nothing it doesn't. Multi-agent doesn't change the privacy model; it reinforces it by keeping each agent's scope narrow.</p>
-
-      <h3 id="bridge">Bridge to your backend when needed</h3>
-      <p>For tasks that genuinely need server compute (processing a large file, running a specialized model, or calling an internal API), one agent can delegate to a backend agent your team hosts, while the rest of the work stays on device.</p>
-
       <h2 id="coordination-models">Coordination Models</h2>
       <p>There are three ways to coordinate agents. Choose based on whether you know the steps ahead of time, whether routing depends on user intent, or whether any agents live off-device:</p>
 
