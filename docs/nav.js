@@ -55,6 +55,8 @@ const NAV = [
     items: [
       { title: "Observability",        href: "observability.html" },
       { title: "API Key Safety",       href: "observability.html#api-key-safety", sub: true },
+      { title: "Lambda Proxy",         href: "observability.html#lambda-proxy",   sub: true },
+      { title: "DDOT Collector",       href: "observability.html#ddot-collector", sub: true },
       { title: "Session Persistence",  href: "session.html" },
       { title: "Modules",              href: "modules.html" },
     ],

@@ -137,56 +137,115 @@ let result = try await agent.run("What is 42 * 17?")
 )</code></pre>
       </div>
 
-      <h3 id="collector-proxy">Production: OTel Collector proxy</h3>
-      <p>For any app you ship to users, run an <a href="https://opentelemetry.io/docs/collector/" target="_blank">OpenTelemetry Collector</a> on your backend. The app sends unauthenticated OTLP to your Collector. The Collector holds the API key and forwards to Datadog. The key never reaches the device.</p>
+      <h3 id="collector-proxy">Production: proxy backend</h3>
+      <p>For any app you ship to users, put a lightweight backend between your app and Datadog. The app sends OTLP to your endpoint with no credentials. The backend adds the API key and forwards to Datadog. The key never reaches the device.</p>
 
       <div class="flow">
         <div class="flow-row">
           <span class="flow-node blue">iOS / macOS app</span>
-          <span class="flow-arrow">→ unauthenticated OTLP →</span>
-          <span class="flow-node purple">Your Collector</span>
-          <span class="flow-arrow">→ dd-api-key →</span>
+          <span class="flow-arrow">→ OTLP (no key) →</span>
+          <span class="flow-node purple">Your proxy</span>
+          <span class="flow-arrow">→ + dd-api-key →</span>
           <span class="flow-node green">Datadog</span>
         </div>
       </div>
 
-      <p>Configure the app to point at your Collector endpoint instead of Datadog directly:</p>
+      <p>The proxy's only job is to inject the credential your app cannot safely hold. The OTLP payload your app built -- spans, token counts, trace hierarchy -- passes through unchanged.</p>
+
+      <p>Point the app at your proxy endpoint instead of Datadog directly:</p>
       <div class="code-block">
-        <div class="code-header"><span class="code-label">App (no credentials)</span><span class="code-lang">Swift</span></div>
-        <pre><code class="language-swift">// App sends to your Collector -- no API key in the binary
-observability: OTelObservabilityEngine.datadog(
-    apiKey: "",   // not used -- Collector adds the key server-side
+        <div class="code-header"><span class="code-label">App (no credentials in binary)</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">observability: OTelObservabilityEngine.datadog(
+    apiKey: "",   // ignored -- proxy adds the key server-side
     service: "my-app",
-    endpoint: URL(string: "https://collector.yourbackend.com/v1/traces")
+    endpoint: URL(string: "https://your-proxy.example.com/v1/traces")
 )</code></pre>
       </div>
 
+      <h4 id="lambda-proxy">Option A: Lambda proxy (serverless)</h4>
+      <p>The simplest deployment: an API Gateway + Lambda function that adds the API key header and forwards. No servers to manage.</p>
+
       <div class="code-block">
-        <div class="code-header"><span class="code-label">Collector config (otel-collector.yaml)</span><span class="code-lang">yaml</span></div>
+        <div class="code-header"><span class="code-label">Lambda handler (Node.js)</span><span class="code-lang">javascript</span></div>
+        <pre><code class="language-javascript">export const handler = async (event) => {
+  const apiKey = process.env.DD_API_KEY; // set in Lambda, never in app
+
+  const response = await fetch("https://otlp.datadoghq.com/v1/traces", {
+    method: "POST",
+    headers: {
+      "Content-Type": event.headers["content-type"] ?? "application/x-protobuf",
+      "dd-api-key": apiKey,
+      "dd-otlp-source": "llmobs",
+    },
+    body: Buffer.from(event.body, event.isBase64Encoded ? "base64" : "utf8"),
+  });
+
+  return { statusCode: response.status };
+};</code></pre>
+      </div>
+
+      <div class="callout callout-warn">
+        <span class="callout-icon">⚠️</span>
+        <div class="callout-body">
+          <p><strong>Security risks with a basic Lambda proxy:</strong></p>
+          <ul style="margin-top:0.5rem">
+            <li><strong>Unauthenticated writes.</strong> Anyone who finds your API Gateway URL can POST arbitrary spans to your Datadog account. They cannot read your data, but they can pollute your LLM Observability traces with junk.</li>
+            <li><strong>Cost amplification.</strong> Flooding the endpoint runs up Lambda invocation costs and Datadog ingestion costs simultaneously.</li>
+            <li><strong>No payload validation.</strong> The Lambda forwards whatever it receives without checking it is valid OTLP.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h4 id="lambda-security">Hardening the Lambda proxy</h4>
+      <p>Apply these mitigations in order of effort:</p>
+      <table>
+        <thead><tr><th>Mitigation</th><th>What it prevents</th><th>Effort</th></tr></thead>
+        <tbody>
+          <tr><td>API Gateway rate limiting + throttling</td><td>Cost amplification from floods</td><td>Low -- configure in AWS console</td></tr>
+          <tr><td>API Gateway request size limit</td><td>Oversized payloads inflating Datadog ingestion</td><td>Low -- one setting</td></tr>
+          <tr><td>AWS WAF on the API Gateway</td><td>Known bad actors, automated scanners</td><td>Medium</td></tr>
+          <tr><td>Cognito JWT auth on the API Gateway</td><td>Unauthenticated writes entirely</td><td>Medium -- requires your app to sign in</td></tr>
+          <tr><td>API key stored in AWS Secrets Manager</td><td>Key exposure if Lambda env is read</td><td>Low -- change one env var to a Secrets Manager lookup</td></tr>
+        </tbody>
+      </table>
+
+      <p>Rate limiting is the minimum you should add before shipping. A usage plan in API Gateway takes two minutes to configure and caps the blast radius of any abuse:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">API Gateway usage plan (AWS CLI)</span><span class="code-lang">bash</span></div>
+        <pre><code class="language-bash">aws apigateway create-usage-plan \
+  --name "otlp-proxy-plan" \
+  --throttle burstLimit=50,rateLimit=10 \
+  --quota limit=50000,period=DAY</code></pre>
+      </div>
+
+      <h4 id="ddot-collector">Option B: Datadog Collector (DDOT) on ECS / Fargate</h4>
+      <p>For higher volume or if you already run container infrastructure, Datadog's own <a href="https://docs.datadoghq.com/opentelemetry/setup/ddot_collector/" target="_blank">DDOT Collector</a> is the better fit. It is a long-running process so it handles batching, retries, and buffering correctly -- Lambda is stateless and cannot do this reliably. It also integrates with Datadog Fleet Automation for remote configuration.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">DDOT Collector config</span><span class="code-lang">yaml</span></div>
         <pre><code>receivers:
   otlp:
     protocols:
       http:
-        endpoint: 0.0.0.0:4318
+        endpoint: 0.0.0.0:4318  # your app points here
 
 exporters:
-  otlphttp:
-    endpoint: https://otlp.datadoghq.com
-    headers:
-      dd-api-key: ${env:DD_API_KEY}
-      dd-otlp-source: llmobs
+  datadog:
+    api:
+      key: ${env:DD_API_KEY}
+      site: datadoghq.com
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
-      exporters: [otlphttp]</code></pre>
+      exporters: [datadog]</code></pre>
       </div>
 
       <div class="callout callout-tip">
         <span class="callout-icon">💡</span>
         <div class="callout-body">
-          <p>The Collector also acts as a buffer -- if Datadog is temporarily unavailable, spans are retried rather than dropped. You can also add filtering, sampling, or PII scrubbing at the Collector layer without touching the app.</p>
+          <p>The DDOT Collector also retries failed exports, applies sampling, scrubs PII, and maps OTel attributes to Datadog's data model more precisely than the generic OTLP exporter. Use Lambda for simplicity; use DDOT for production scale.</p>
         </div>
       </div>
 
