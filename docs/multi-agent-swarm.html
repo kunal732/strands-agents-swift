@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Swarm -- Multi-Agent -- Strands Agents Swift</title>
+  <title>Swarm | Multi-Agent | Strands Agents Swift</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -59,7 +59,7 @@ let coordinatorAgent = Agent(
     - "calendar-agent": scheduling, events, reminders, availability
     - "notes-agent": creating or finding notes, saving information
     - "tasks-agent": to-do items, task lists, Reminders
-    Hand off immediately -- do not try to answer yourself.
+    Hand off immediately. Do not try to answer yourself.
     """
 )
 
@@ -96,7 +96,7 @@ print(result.output)</code></pre>
       </div>
 
       <h2 id="handoffs">Handoffs</h2>
-      <p>A handoff transfers execution to another agent, carrying the full conversation context. The receiving agent sees everything that happened before -- all previous messages, tool results, and handoff notes.</p>
+      <p>A handoff transfers execution to another agent, carrying the full conversation context. The receiving agent sees everything that happened before: all previous messages, tool results, and handoff notes.</p>
 
       <div class="callout callout-note">
         <span class="callout-icon">ℹ️</span>
@@ -113,12 +113,12 @@ let swarm = SwarmOrchestrator(
         SwarmMember(id: "calendar-agent", description: "Manages calendar events", agent: calendarAgent),
         SwarmMember(id: "tasks-agent",    description: "Manages Reminders",        agent: tasksAgent),
     ],
-    entryPoint: "calendar-agent"  // skip coordinator -- always start with calendar
+    entryPoint: "calendar-agent"  // skip coordinator; always start with calendar
 )</code></pre>
       </div>
 
       <h2 id="real-world-example">Real-World Example: Fitness App Assistant</h2>
-      <p>A fitness app with a natural language assistant. The user asks about workouts, nutrition, or recovery. A triage agent reads the intent and routes to the right specialist -- each with its own tools and on-device data.</p>
+      <p>A fitness app with a natural language assistant. The user asks about workouts, nutrition, or recovery. A triage agent reads the intent and routes to the right specialist. Each specialist has its own tools and on-device data.</p>
       <div class="code-block">
         <div class="code-header"><span class="code-label">Fitness assistant swarm</span><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">let triageAgent = Agent(

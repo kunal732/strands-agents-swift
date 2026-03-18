@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Session Persistence -- Strands Agents Swift</title>
+  <title>Session Persistence | Strands Agents Swift</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -40,7 +40,7 @@ let agent = Agent(
     sessionManager: manager
 )
 
-// First run -- history saved automatically
+// First run: history saved automatically
 _ = try await agent.run("My name is Alex.")
 
 // Restart app, recreate agent with the same sessionId
@@ -68,9 +68,9 @@ let agent = Agent(model: provider, sessionManager: manager)</code></pre>
       <h2 id="session-ids">Session IDs</h2>
       <p>The session ID is an arbitrary string that identifies a conversation. Use whatever makes sense for your data model:</p>
       <ul>
-        <li><code>"user-\(userId)"</code> -- one persistent conversation per user</li>
-        <li><code>"chat-\(UUID())"</code> -- a new conversation per session</li>
-        <li><code>"support-ticket-\(ticketId)"</code> -- a conversation tied to a support ticket</li>
+        <li><code>"user-\(userId)"</code> for one persistent conversation per user</li>
+        <li><code>"chat-\(UUID())"</code> for a new conversation per session</li>
+        <li><code>"support-ticket-\(ticketId)"</code> for a conversation tied to a support ticket</li>
       </ul>
 
       <h2 id="guarantees">Storage Guarantees</h2>

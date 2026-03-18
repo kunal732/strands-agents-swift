@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agent-to-Agent (A2A) -- Strands Agents Swift</title>
+  <title>Agent-to-Agent (A2A) | Strands Agents Swift</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -21,7 +21,7 @@
 
       <h2 id="when-to-use">When to Use A2A</h2>
       <ul>
-        <li>Private or offline tasks stay on device -- only heavy work goes to the backend</li>
+        <li>Private and offline tasks stay on device. Only heavy work goes to the backend.</li>
         <li>A task is too compute-intensive for the device (processing a 200-page document, complex multi-step research)</li>
         <li>Your backend ML team built their agent in Python or TypeScript Strands SDK and you want to call it from Swift without either team changing how they write agents</li>
         <li>A task requires a specialized model that only runs on your backend server</li>
@@ -52,7 +52,7 @@
 /// Process a long document and return a structured summary.
 @Tool
 func processDocument(content: String) async throws -> String {
-    // heavy document processing -- appropriate for a backend server
+    // heavy document processing; appropriate for a backend server
     return "Summary: ..."
 }
 
@@ -70,7 +70,7 @@ try await server.start()</code></pre>
       </div>
 
       <h2 id="calling-a-remote-agent">Calling the Backend from Your App</h2>
-      <p>Your iOS or macOS app creates an <code>A2AClient</code> pointing at the backend. Pass it to the on-device agent's tool list -- it behaves exactly like a local tool from the caller's perspective:</p>
+      <p>Your iOS or macOS app creates an <code>A2AClient</code> pointing at the backend. Pass it to the on-device agent's tool list. It behaves exactly like a local tool from the caller's perspective:</p>
       <div class="code-block">
         <div class="code-header"><span class="code-label">YourApp/AssistantView.swift</span><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">import StrandsAgents
@@ -99,7 +99,7 @@ print(result.output)</code></pre>
       </div>
 
       <h2 id="cross-language">Working with Your Backend Team</h2>
-      <p>Your app is Swift. Your backend ML team built their agent in Python Strands SDK. A2A connects them without either team changing how they write agents -- the Swift app calls the Python backend over HTTP, and the Python agent serves responses with no knowledge of the Swift caller:</p>
+      <p>Your app is Swift. Your backend ML team built their agent in Python Strands SDK. A2A connects them without either team changing how they write agents. The Swift app calls the Python backend over HTTP, and the Python agent serves responses with no knowledge of the Swift caller:</p>
       <div class="code-block">
         <div class="code-header"><span class="code-label">Calling your team's Python backend agent from Swift</span><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">// Your team's Python Strands agent, served at agents.yourteam.com
@@ -143,7 +143,7 @@ let result = try await onDeviceAgent.run("Analyze the trends in my health data o
 
       <div class="callout callout-tip">
         <span class="callout-icon">💡</span>
-        <div class="callout-body"><p>Use A2A with Graph or Swarm -- they are not mutually exclusive. A graph node can be an A2A client, and a swarm member can hand off to a backend agent over A2A.</p></div>
+        <div class="callout-body"><p>A2A works alongside Graph and Swarm; they are not mutually exclusive. A graph node can be an A2A client, and a swarm member can hand off to a backend agent over A2A.</p></div>
       </div>
 
       <div class="page-nav">

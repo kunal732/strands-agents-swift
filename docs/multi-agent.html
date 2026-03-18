@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Multi-Agent -- Strands Agents Swift</title>
+  <title>Multi-Agent | Strands Agents Swift</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -17,11 +17,11 @@
     <article>
       <div class="breadcrumb"><a href="index.html">Home</a><span class="breadcrumb-sep">›</span>Multi-Agent</div>
       <h1>Multi-Agent</h1>
-      <p class="page-description">Multi-agent is a pattern for building more capable apps. Instead of one general-purpose agent, you build a team of specialists -- each owning one domain of your app -- and let them coordinate. All agents run on device, in the same process, with access to the same Apple APIs.</p>
+      <p class="page-description">Multi-agent is a pattern for building more capable apps. Instead of one general-purpose agent, you build a team of specialists, each owning one domain of your app, and let them coordinate. All agents run on device, in the same process, with access to the same Apple APIs.</p>
 
       <h2 id="mental-model">The Mental Model</h2>
       <p>Think of each agent as a department head in your app. Your calendar agent knows EventKit deeply. Your health agent knows HealthKit. Your notes agent knows your document schema. A coordinator routes the user's natural language request to whoever is best equipped to handle it.</p>
-      <p>This mirrors how you already structure large Apple platform apps -- services own specific data sources, view controllers own specific domains. Multi-agent applies the same separation of concerns to AI reasoning.</p>
+      <p>This mirrors how you already structure large Apple platform apps: services own specific data sources, view controllers own specific domains. Multi-agent applies the same separation of concerns to AI reasoning.</p>
 
       <div class="flow">
         <div class="flow-row">
@@ -56,13 +56,13 @@
       <p>A single agent given access to every API in your app has a sprawling system prompt and inconsistent behavior. A focused agent with one system prompt, one set of tools, and one domain performs better and is easier to debug. Give your calendar agent only calendar tools. Give your health agent only HealthKit tools. They only need to be good at one thing.</p>
 
       <h3 id="parallelism">Apple Silicon handles concurrency well</h3>
-      <p>Independent agents run concurrently using Swift structured concurrency. On a Mac or iPhone with Apple Silicon, multiple inference calls or API lookups running simultaneously is fast. A meeting transcript can be analyzed by a "find action items" agent, a "find decisions" agent, and a "find open questions" agent all at once -- then their results are merged into a single summary.</p>
+      <p>Independent agents run concurrently using Swift structured concurrency. On a Mac or iPhone with Apple Silicon, multiple inference calls or API lookups running simultaneously is fast. A meeting transcript can be analyzed by a "find action items" agent, a "find decisions" agent, and a "find open questions" agent all at once. Their results are then merged into a single summary.</p>
 
       <h3 id="privacy">Sensitive data stays on device</h3>
-      <p>HealthKit records, Calendar events, Messages, location history -- none of it leaves the device when your agents run locally. Each specialist agent can have precisely scoped access to the system data it needs, and nothing it doesn't. Multi-agent doesn't change the privacy model; it reinforces it by keeping each agent's scope narrow.</p>
+      <p>HealthKit records, Calendar events, Messages, and location history never leave the device when your agents run locally. Each specialist agent can have precisely scoped access to the system data it needs, and nothing it doesn't. Multi-agent doesn't change the privacy model; it reinforces it by keeping each agent's scope narrow.</p>
 
       <h3 id="bridge">Bridge to your backend when needed</h3>
-      <p>For tasks that genuinely need server compute -- processing a large file, running a specialized model, calling an internal API -- one agent can delegate to a backend agent your team hosts, while the rest of the work stays on device.</p>
+      <p>For tasks that genuinely need server compute (processing a large file, running a specialized model, or calling an internal API), one agent can delegate to a backend agent your team hosts, while the rest of the work stays on device.</p>
 
       <h2 id="coordination-models">Coordination Models</h2>
       <p>There are three ways to coordinate agents. Choose based on whether you know the steps ahead of time, whether routing depends on user intent, or whether any agents live off-device:</p>
@@ -112,7 +112,7 @@
       </table>
 
       <h2 id="agents-as-tools">Agents as Tools</h2>
-      <p>All three models share the same underlying primitive: an agent can call another agent as a tool. The outer agent invokes the inner agent exactly like any other tool call -- it doesn't need to know what the inner agent does internally.</p>
+      <p>All three models share the same underlying primitive: an agent can call another agent as a tool. The outer agent invokes the inner agent exactly like any other tool call, with no knowledge of what the inner agent does internally.</p>
       <p>This is how you build an assistant that spans multiple Apple frameworks without creating one agent that knows everything:</p>
       <div class="code-block">
         <div class="code-header"><span class="code-label">Daily briefing assistant</span><span class="code-lang">Swift</span></div>
@@ -147,7 +147,7 @@ let briefingAgent = Agent(
     systemPrompt: "You give the user a concise morning briefing. Call all three tools and synthesize their outputs into a prioritized plan for the day."
 )
 
-let briefing = try await briefingAgent.run("Good morning -- what should I focus on today?")</code></pre>
+let briefing = try await briefingAgent.run("Good morning. What should I focus on today?")</code></pre>
       </div>
 
       <h2 id="next-steps">Deep Dives</h2>
@@ -155,7 +155,7 @@ let briefing = try await briefingAgent.run("Good morning -- what should I focus 
         <a class="card" href="multi-agent-graph.html">
           <div class="card-icon">🔗</div>
           <h3>Graph</h3>
-          <p>DAG-based pipelines with parallel execution and explicit dependencies -- all on device.</p>
+          <p>DAG-based pipelines with parallel execution and explicit dependencies, all running on device.</p>
         </a>
         <a class="card" href="multi-agent-swarm.html">
           <div class="card-icon">🐝</div>

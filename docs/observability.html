@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Observability -- Strands Agents Swift</title>
+  <title>Observability | Strands Agents Swift</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -17,7 +17,7 @@
     <article>
       <div class="breadcrumb"><a href="index.html">Home</a><span class="breadcrumb-sep">›</span>Reference<span class="breadcrumb-sep">›</span>Observability</div>
       <h1>Observability</h1>
-      <p class="page-description">Traces, metrics, and hooks give you visibility into every agent run -- from token counts to per-cycle latency to tool execution.</p>
+      <p class="page-description">Traces, metrics, and hooks give you visibility into every agent run: token counts, per-cycle latency, and tool execution.</p>
 
       <h2 id="opentelemetry">OpenTelemetry Tracing</h2>
       <p>Add <code>StrandsOTelObservability</code> to your target and pass an <code>OTelObservabilityEngine</code> when creating the agent. Every agent run produces a trace with spans for each model invocation and tool call.</p>
@@ -58,7 +58,7 @@ let result = try await agent.run("Analyze this dataset")</code></pre>
       </table>
 
       <h2 id="run-metrics">Run Metrics</h2>
-      <p>Every <code>AgentResult</code> carries metrics for the entire run and per-cycle breakdowns -- no extra configuration needed:</p>
+      <p>Every <code>AgentResult</code> carries metrics for the entire run and per-cycle breakdowns, with no extra configuration needed:</p>
       <div class="code-block">
         <div class="code-header"><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">let result = try await agent.run("Summarize the quarterly report")
@@ -102,7 +102,7 @@ agent.hookRegistry.addCallback(AfterToolEvent.self) { event in
     print("Tool \(event.toolName): \(event.result.status)")
 }
 
-// At the end of every run -- good for logging to a metrics system
+// At the end of every run (good for logging to a metrics system)
 agent.hookRegistry.addCallback(MetricsEvent.self) { event in
     myMetrics.record(
         cycles: event.metrics.cycleCount,

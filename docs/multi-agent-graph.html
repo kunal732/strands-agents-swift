@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Graph -- Multi-Agent -- Strands Agents Swift</title>
+  <title>Graph | Multi-Agent | Strands Agents Swift</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -103,7 +103,7 @@ print(result.output)  // editor's synthesized feedback</code></pre>
       </div>
 
       <h2 id="chaining">Chaining Stages</h2>
-      <p>Stages chain by declaring dependencies. Each node's output is forwarded as context to every node that lists it as a dependency -- no manual wiring needed.</p>
+      <p>Stages chain by declaring dependencies. Each node's output is forwarded automatically as context to every node that lists it as a dependency. No manual wiring needed.</p>
       <p>A full writing pipeline shows this clearly: three analysis agents run in parallel, then an editor synthesizes their findings, and subsequent stages refine and finalize the document.</p>
 
       <!-- ── Full writing pipeline: grammar+tone+clarity → editor → polish ── -->
@@ -178,18 +178,18 @@ print(result.output)  // editor's synthesized feedback</code></pre>
       <div class="code-block">
         <div class="code-header"><span class="code-label">Full writing pipeline</span><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">let graph = GraphOrchestrator(nodes: [
-    // Stage 1 -- three independent analysis agents run concurrently
+    // Stage 1: three independent analysis agents run concurrently
     GraphNode(id: "grammar",  agent: grammarAgent),
     GraphNode(id: "tone",     agent: toneAgent),
     GraphNode(id: "clarity",  agent: clarityAgent),
 
-    // Stage 2 -- editor synthesizes all three analyses
+    // Stage 2: editor synthesizes all three analyses
     GraphNode(id: "editor",  agent: editorAgent,  dependencies: ["grammar", "tone", "clarity"]),
 
-    // Stage 3 -- polish agent refines the edited draft
+    // Stage 3: polish agent refines the edited draft
     GraphNode(id: "polish",  agent: polishAgent,  dependencies: ["editor"]),
 
-    // Stage 4 -- export agent formats the final document
+    // Stage 4: export agent formats the final document
     GraphNode(id: "export",  agent: exportAgent,  dependencies: ["polish"]),
 ])
 
@@ -198,11 +198,11 @@ print(result.output)</code></pre>
       </div>
 
       <h2 id="parallel-execution">Parallel Execution</h2>
-      <p>The orchestrator resolves the dependency graph at runtime. In the pipeline above, <code>grammar</code>, <code>tone</code>, and <code>clarity</code> all start at the same moment -- they don't wait for each other. This is the main performance benefit over running agents sequentially, especially on device where inference time matters.</p>
+      <p>The orchestrator resolves the dependency graph at runtime. In the pipeline above, <code>grammar</code>, <code>tone</code>, and <code>clarity</code> all start at the same moment and run without waiting for each other. This is the main performance benefit over running agents sequentially, especially on device where inference time matters.</p>
 
       <div class="callout callout-tip">
         <span class="callout-icon">💡</span>
-        <div class="callout-body"><p>Nodes are declared in any order -- the dependency list, not the declaration order, determines execution. Add as many independent analysis nodes as you like; they all run concurrently in the same process.</p></div>
+        <div class="callout-body"><p>Nodes are declared in any order. The dependency list, not the declaration order, determines execution. Add as many independent analysis nodes as you like; they all run concurrently in the same process.</p></div>
       </div>
 
       <h2 id="accessing-results">Accessing Intermediate Results</h2>
@@ -303,7 +303,7 @@ function playFull() {
   ['f-grammar','f-tone','f-clarity'].forEach(id => setState(id, 'pending'));
   ['f-editor','f-polish','f-export'].forEach(id => setState(id, 'waiting'));
 
-  // Stage 1 -- all three fire simultaneously
+  // Stage 1: all three fire simultaneously
   setTimeout(() => {
     setState('f-grammar',  'running');
     setState('f-tone',     'running');

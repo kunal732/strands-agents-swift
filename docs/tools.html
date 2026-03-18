@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tools -- Strands Agents Swift</title>
+  <title>Tools | Strands Agents Swift</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -49,7 +49,7 @@ let agent = Agent(model: provider, tools: [wordCount, calculator])</code></pre>
         <li>A struct conforming to <code>AgentTool</code> with the JSON schema derived from the parameter types</li>
         <li>A <code>let</code> binding with the same name as the function that you pass to <code>Agent(tools:)</code></li>
       </ul>
-      <p>The function itself is unchanged -- you can still call it directly as a regular Swift function:</p>
+      <p>The function itself is unchanged. You can still call it directly as a regular Swift function:</p>
       <div class="code-block">
         <div class="code-header"><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">// Still callable as a plain Swift function
@@ -69,15 +69,15 @@ let count = wordCount(text: "hello world")  // 2</code></pre>
       </table>
 
       <h3 id="optional-parameters">Optional parameters and defaults</h3>
-      <p>Parameters with a default value or <code>?</code> type are treated as optional -- they are included in the schema but not in <code>required</code>:</p>
+      <p>Parameters with a default value or <code>?</code> type are treated as optional: included in the schema but excluded from <code>required</code>:</p>
       <div class="code-block">
         <div class="code-header"><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">/// Look up current weather for a city.
 @Tool
 func getWeather(
     city: String,              // required
-    unit: String = "celsius",  // optional -- has a default
-    detailed: Bool = false     // optional -- has a default
+    unit: String = "celsius",  // optional (has a default)
+    detailed: Bool = false     // optional (has a default)
 ) async throws -> String {
     // fetch from weather API
     return "22°C, partly cloudy in \(city)"
@@ -105,7 +105,7 @@ func searchWeb(query: String, maxResults: Int = 5) async throws -> String {
       </div>
 
       <h2 id="manual-conformance">Manual Conformance</h2>
-      <p>For cases where the macro is not sufficient -- complex input decoding, dynamic schemas, or reuse across targets -- you can conform to <code>AgentTool</code> directly:</p>
+      <p>For complex input decoding, dynamic schemas, or reuse across targets, you can conform to <code>AgentTool</code> directly:</p>
       <div class="code-block">
         <div class="code-header"><span class="code-label">Manual AgentTool conformance</span><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">struct WordCount: AgentTool {
@@ -158,7 +158,7 @@ let agent = Agent(model: provider, tools: [WordCount()])</code></pre>
       </div>
 
       <h2 id="mcp-tools">MCP Tool Providers</h2>
-      <p>The SDK supports the <a href="https://modelcontextprotocol.io" target="_blank">Model Context Protocol (MCP)</a>. Connect any MCP server as a tool provider -- all its tools are available to the agent automatically:</p>
+      <p>The SDK supports the <a href="https://modelcontextprotocol.io" target="_blank">Model Context Protocol (MCP)</a>. Connect any MCP server as a tool provider and all its tools become available to the agent automatically:</p>
       <div class="code-block">
         <div class="code-header"><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">let mcpProvider = MCPToolProvider(serverURL: URL(string: "http://localhost:3000")!)
