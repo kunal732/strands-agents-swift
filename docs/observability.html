@@ -64,7 +64,14 @@
       </table>
 
       <h2 id="datadog">Sending to Datadog LLM Observability</h2>
-      <p>Point the OTLP exporter at Datadog's intake endpoint. The SDK emits GenAI semantic conventions that Datadog's LLM Observability product reads natively.</p>
+      <p>The SDK emits GenAI semantic conventions that Datadog's LLM Observability product reads natively. Before choosing a setup, read the section below on API key safety.</p>
+
+      <div class="callout callout-warn">
+        <span class="callout-icon">⚠️</span>
+        <div class="callout-body">
+          <p><strong>Do not embed a Datadog API key in a shipped app.</strong> Datadog's OTLP intake only accepts API keys -- not restricted client tokens. An API key extracted from your binary gives full write access to your Datadog account. See <a href="#api-key-safety">API Key Safety</a> below before choosing a setup.</p>
+        </div>
+      </div>
 
       <div class="code-block">
         <div class="code-header"><span class="code-label">Package.swift</span><span class="code-lang">Swift</span></div>
@@ -79,18 +86,15 @@
       </div>
 
       <div class="code-block">
-        <div class="code-header"><span class="code-label">Datadog setup</span><span class="code-lang">Swift</span></div>
+        <div class="code-header"><span class="code-label">Setup</span><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">import StrandsAgents
-import StrandsBedrockProvider
 import StrandsOTelObservability
 
 let agent = Agent(
-    model: try BedrockProvider(config: BedrockConfig(
-        modelId: "us.anthropic.claude-sonnet-4-20250514-v1:0"
-    )),
+    model: provider,
     tools: [myTool],
     observability: OTelObservabilityEngine.datadog(
-        apiKey: ProcessInfo.processInfo.environment["DD_API_KEY"] ?? "",
+        apiKey: "...",   // see API Key Safety section below
         service: "my-app"
     )
 )
@@ -99,31 +103,101 @@ let result = try await agent.run("What is 42 * 17?")
 // Traces appear in Datadog LLM Observability within seconds</code></pre>
       </div>
 
-      <div class="callout callout-tip">
-        <span class="callout-icon">💡</span>
-        <div class="callout-body">
-          <p>The <code>.datadog()</code> factory configures the OTLP/HTTP exporter, sets up a <code>BatchSpanProcessor</code>, registers the tracer provider, and attaches the service name and version as OTel resource attributes. For EU accounts, pass <code>site: "datadoghq.eu"</code>.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">All options</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">OTelObservabilityEngine.datadog(
+    apiKey:   "your-dd-api-key",
+    service:  "my-app",          // service name shown in Datadog
+    version:  "2.1.0",           // optional, defaults to "1.0"
+    site:     "datadoghq.eu",    // optional, defaults to "datadoghq.com"
+    endpoint: URL(string: "https://your-collector.example.com/v1/traces")
+    // endpoint overrides site -- use this for the Collector proxy pattern
+)</code></pre>
+      </div>
+
+      <h2 id="api-key-safety">API Key Safety</h2>
+      <p>Datadog's OTLP endpoint requires an API key. Unlike Datadog's native mobile SDK (<code>dd-sdk-ios</code>), which uses restricted client tokens, the OTLP intake has no client-safe credential type. This creates a real problem for shipped apps.</p>
+
+      <table>
+        <thead><tr><th>Context</th><th>Approach</th></tr></thead>
+        <tbody>
+          <tr><td>Development / internal tools</td><td>Environment variable or <code>.xcconfig</code> (gitignored)</td></tr>
+          <tr><td>Server-side agent (not in a user's app)</td><td>Embed directly via environment variable on the server</td></tr>
+          <tr><td>Shipped iOS / macOS app</td><td>Collector proxy (see below) -- never embed the key</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="dev-setup">Development: environment variable</h3>
+      <p>For local development and internal tools, read the key from an environment variable set in your shell or a gitignored <code>.xcconfig</code> file. Never commit it.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">observability: OTelObservabilityEngine.datadog(
+    apiKey: ProcessInfo.processInfo.environment["DD_API_KEY"] ?? "",
+    service: "my-app"
+)</code></pre>
+      </div>
+
+      <h3 id="collector-proxy">Production: OTel Collector proxy</h3>
+      <p>For any app you ship to users, run an <a href="https://opentelemetry.io/docs/collector/" target="_blank">OpenTelemetry Collector</a> on your backend. The app sends unauthenticated OTLP to your Collector. The Collector holds the API key and forwards to Datadog. The key never reaches the device.</p>
+
+      <div class="flow">
+        <div class="flow-row">
+          <span class="flow-node blue">iOS / macOS app</span>
+          <span class="flow-arrow">→ unauthenticated OTLP →</span>
+          <span class="flow-node purple">Your Collector</span>
+          <span class="flow-arrow">→ dd-api-key →</span>
+          <span class="flow-node green">Datadog</span>
         </div>
       </div>
 
+      <p>Configure the app to point at your Collector endpoint instead of Datadog directly:</p>
       <div class="code-block">
-        <div class="code-header"><span class="code-label">Full options</span><span class="code-lang">Swift</span></div>
-        <pre><code class="language-swift">OTelObservabilityEngine.datadog(
-    apiKey: "your-dd-api-key",
-    service: "my-app",         // shows as service name in Datadog
-    version: "2.1.0",          // optional, defaults to "1.0"
-    site: "datadoghq.eu",      // optional, defaults to "datadoghq.com"
-    endpoint: URL(string: "https://your-proxy.example.com/v1/traces")  // optional, overrides site
+        <div class="code-header"><span class="code-label">App (no credentials)</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">// App sends to your Collector -- no API key in the binary
+observability: OTelObservabilityEngine.datadog(
+    apiKey: "",   // not used -- Collector adds the key server-side
+    service: "my-app",
+    endpoint: URL(string: "https://collector.yourbackend.com/v1/traces")
 )</code></pre>
       </div>
 
       <div class="code-block">
-        <div class="code-header"><span class="code-label">Manual setup (any OTLP backend)</span><span class="code-lang">Swift</span></div>
+        <div class="code-header"><span class="code-label">Collector config (otel-collector.yaml)</span><span class="code-lang">yaml</span></div>
+        <pre><code>receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  otlphttp:
+    endpoint: https://otlp.datadoghq.com
+    headers:
+      dd-api-key: ${env:DD_API_KEY}
+      dd-otlp-source: llmobs
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [otlphttp]</code></pre>
+      </div>
+
+      <div class="callout callout-tip">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body">
+          <p>The Collector also acts as a buffer -- if Datadog is temporarily unavailable, spans are retried rather than dropped. You can also add filtering, sampling, or PII scrubbing at the Collector layer without touching the app.</p>
+        </div>
+      </div>
+
+      <h3 id="manual-otel">Manual OTel setup (any backend)</h3>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">import OpenTelemetrySdk
 import OpenTelemetryProtocolExporterHttp
 
 let exporter = OtlpHttpTraceExporter(
-    endpoint: URL(string: "http://localhost:4317")!
+    endpoint: URL(string: "https://collector.yourbackend.com/v1/traces")!
 )
 let provider = TracerProviderBuilder()
     .add(spanProcessor: BatchSpanProcessor(spanExporter: exporter))

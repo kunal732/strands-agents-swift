@@ -54,6 +54,7 @@ const NAV = [
     label: "Reference",
     items: [
       { title: "Observability",        href: "observability.html" },
+      { title: "API Key Safety",       href: "observability.html#api-key-safety", sub: true },
       { title: "Session Persistence",  href: "session.html" },
       { title: "Modules",              href: "modules.html" },
     ],
