@@ -17,12 +17,12 @@
     <article>
       <div class="breadcrumb"><a href="index.html">Home</a><span class="breadcrumb-sep">›</span><a href="multi-agent.html">Multi-Agent</a><span class="breadcrumb-sep">›</span>Graph</div>
       <h1>Graph</h1>
-      <p class="page-description">Run agents as nodes in a directed acyclic graph (DAG). Independent nodes execute in parallel; dependent nodes wait for their inputs automatically.</p>
+      <p class="page-description">Run agents as nodes in a directed acyclic graph (DAG). Independent nodes execute in parallel; dependent nodes wait for their inputs automatically. All agents run in the same app process on the same device.</p>
 
       <h2 id="when-to-use">When to Use Graph</h2>
       <ul>
-        <li>You know all the steps before execution starts</li>
-        <li>Some steps are independent and can run concurrently</li>
+        <li>You know all the analysis steps before execution starts</li>
+        <li>Some steps are independent and can run concurrently on device</li>
         <li>You want predictable, auditable execution order</li>
         <li>Downstream agents need the results of upstream agents as context</li>
       </ul>
@@ -30,7 +30,7 @@
       <h2 id="how-it-works">How It Works</h2>
       <p>Each node is an agent with an ID and an optional <code>dependencies</code> list. Nodes with no unsatisfied dependencies run immediately; nodes with dependencies wait until all their inputs are ready. The orchestrator handles scheduling automatically.</p>
 
-      <!-- ── Basic concept: lint + test → build ── -->
+      <!-- ── Basic concept: grammar + tone → editor ── -->
       <div class="pipe-wrap">
         <svg class="pipe-svg" id="svg-basic" viewBox="0 0 460 162" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -44,9 +44,9 @@
           <rect x="252" y="8" width="200" height="146" rx="8" fill="rgba(166,227,161,0.05)"  stroke="rgba(166,227,161,0.15)"  stroke-width="1"/>
 
           <!-- Column headers -->
-          <text x="108" y="27" class="pipe-col-title">VALIDATE</text>
+          <text x="108" y="27" class="pipe-col-title">ANALYZE</text>
           <text x="108" y="39" class="pipe-col-sub">runs in parallel</text>
-          <text x="352" y="27" class="pipe-col-title">BUILD</text>
+          <text x="352" y="27" class="pipe-col-title">SYNTHESIZE</text>
           <text x="352" y="39" class="pipe-col-sub">waits for both</text>
 
           <!-- Arrows -->
@@ -54,62 +54,59 @@
           <path d="M 208 113 C 230 113 230 94 252 94" stroke="#3a3a5a" stroke-width="1.5" fill="none" marker-end="url(#a1)"/>
 
           <!-- Nodes -->
-          <g id="b-lint" class="pnode pending">
+          <g id="b-grammar" class="pnode pending">
             <rect x="20" y="48" width="176" height="36" rx="7"/>
-            <text x="108" y="71" class="pnode-label">lint</text>
+            <text x="108" y="71" class="pnode-label">grammar</text>
           </g>
-          <g id="b-test" class="pnode pending">
+          <g id="b-tone" class="pnode pending">
             <rect x="20" y="96" width="176" height="36" rx="7"/>
-            <text x="108" y="119" class="pnode-label">test</text>
+            <text x="108" y="119" class="pnode-label">tone</text>
           </g>
-          <g id="b-build" class="pnode waiting">
+          <g id="b-editor" class="pnode waiting">
             <rect x="264" y="76" width="176" height="36" rx="7"/>
-            <text x="352" y="99" class="pnode-label">build</text>
+            <text x="352" y="99" class="pnode-label">editor</text>
           </g>
         </svg>
         <button class="pipe-btn" onclick="playBasic()">▶ Replay</button>
       </div>
 
       <h2 id="basic-example">Basic Example</h2>
-      <p>A CI/CD-style pipeline: lint and test run concurrently. Once both pass, the build agent runs using their results as context.</p>
+      <p>A writing assistant on macOS or iOS: a grammar agent and a tone agent analyze the user's draft in parallel. Once both finish, an editor agent synthesizes their feedback into actionable suggestions.</p>
       <div class="code-block">
-        <div class="code-header"><span class="code-label">ci_pipeline.swift</span><span class="code-lang">Swift</span></div>
+        <div class="code-header"><span class="code-label">writing_assistant.swift</span><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">import StrandsAgents
 
-let lintAgent = Agent(
+let grammarAgent = Agent(
     model: provider,
-    tools: [readSourceFiles],
-    systemPrompt: "Analyze code for style violations and errors. Report each issue with file and line."
+    systemPrompt: "You are a grammar expert. Review the draft for grammar and spelling errors. Return a concise list of specific corrections."
 )
 
-let testAgent = Agent(
+let toneAgent = Agent(
     model: provider,
-    tools: [runTestSuite],
-    systemPrompt: "Run the test suite. Report any failures with their error messages."
+    systemPrompt: "You are a writing coach. Review the draft's tone and voice. Return concrete suggestions for making it clearer and more engaging."
 )
 
-let buildAgent = Agent(
+let editorAgent = Agent(
     model: provider,
-    tools: [compileBuild],
-    systemPrompt: "Build the project. You will receive lint and test results as context first."
+    systemPrompt: "You are a senior editor. You will receive grammar feedback and tone feedback for a draft. Synthesize them into a short, prioritized list of actionable improvements."
 )
 
 let graph = GraphOrchestrator(nodes: [
-    GraphNode(id: "lint",  agent: lintAgent),
-    GraphNode(id: "test",  agent: testAgent),
-    // build waits for both lint and test to finish
-    GraphNode(id: "build", agent: buildAgent, dependencies: ["lint", "test"]),
+    GraphNode(id: "grammar", agent: grammarAgent),
+    GraphNode(id: "tone",    agent: toneAgent),
+    // editor waits for both grammar and tone to finish
+    GraphNode(id: "editor",  agent: editorAgent, dependencies: ["grammar", "tone"]),
 ])
 
-let result = try await graph.run("Run CI checks on the latest commit")
-print(result.output)  // build agent's final summary</code></pre>
+let result = try await graph.run("Review this draft: \(userDraft)")
+print(result.output)  // editor's synthesized feedback</code></pre>
       </div>
 
       <h2 id="chaining">Chaining Stages</h2>
       <p>Stages chain by declaring dependencies. Each node's output is forwarded as context to every node that lists it as a dependency — no manual wiring needed.</p>
-      <p>A full CI/CD pipeline shows this clearly: three checks run in parallel, then each subsequent stage unblocks only after the previous one completes.</p>
+      <p>A full writing pipeline shows this clearly: three analysis agents run in parallel, then an editor synthesizes their findings, and subsequent stages refine and finalize the document.</p>
 
-      <!-- ── Full CI/CD: lint+test+security → build → deploy → smoke ── -->
+      <!-- ── Full writing pipeline: grammar+tone+clarity → editor → polish ── -->
       <div class="pipe-wrap">
         <svg class="pipe-svg" id="svg-full" viewBox="0 0 696 178" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -125,101 +122,101 @@ print(result.output)  // build agent's final summary</code></pre>
           <rect x="480" y="6" width="210" height="166" rx="8" fill="rgba(166,227,161,0.05)"  stroke="rgba(166,227,161,0.15)"  stroke-width="1"/>
 
           <!-- Column headers -->
-          <text x="89"  y="24" class="pipe-col-title">VALIDATE</text>
+          <text x="89"  y="24" class="pipe-col-title">ANALYZE</text>
           <text x="89"  y="35" class="pipe-col-sub">3 parallel checks</text>
-          <text x="255" y="24" class="pipe-col-title">BUILD</text>
+          <text x="255" y="24" class="pipe-col-title">EDIT</text>
           <text x="255" y="35" class="pipe-col-sub">waits for all</text>
-          <text x="397" y="24" class="pipe-col-title">DEPLOY</text>
-          <text x="397" y="35" class="pipe-col-sub">waits for build</text>
-          <text x="585" y="24" class="pipe-col-title">VERIFY</text>
-          <text x="585" y="35" class="pipe-col-sub">waits for deploy</text>
+          <text x="397" y="24" class="pipe-col-title">POLISH</text>
+          <text x="397" y="35" class="pipe-col-sub">waits for edit</text>
+          <text x="585" y="24" class="pipe-col-title">EXPORT</text>
+          <text x="585" y="35" class="pipe-col-sub">waits for polish</text>
 
-          <!-- Arrows: validate → build -->
+          <!-- Arrows: analyze → edit -->
           <path d="M 172 57  C 185 57  185 95  196 95"  stroke="#3a3a5a" stroke-width="1.5" fill="none" marker-end="url(#a2)"/>
           <path d="M 172 95  L 196 95"                  stroke="#3a3a5a" stroke-width="1.5" fill="none" marker-end="url(#a2)"/>
           <path d="M 172 133 C 185 133 185 95  196 95"  stroke="#3a3a5a" stroke-width="1.5" fill="none" marker-end="url(#a2)"/>
-          <!-- build → deploy -->
+          <!-- edit → polish -->
           <path d="M 314 95 L 338 95" stroke="#3a3a5a" stroke-width="1.5" fill="none" marker-end="url(#a2)"/>
-          <!-- deploy → verify -->
+          <!-- polish → export -->
           <path d="M 456 95 L 480 95" stroke="#3a3a5a" stroke-width="1.5" fill="none" marker-end="url(#a2)"/>
 
-          <!-- Nodes: validate column -->
-          <g id="f-lint" class="pnode pending">
+          <!-- Nodes: analyze column -->
+          <g id="f-grammar" class="pnode pending">
             <rect x="16"  y="42"  width="144" height="30" rx="6"/>
-            <text x="88"  y="62"  class="pnode-label">lint</text>
+            <text x="88"  y="62"  class="pnode-label">grammar</text>
           </g>
-          <g id="f-test" class="pnode pending">
+          <g id="f-tone" class="pnode pending">
             <rect x="16"  y="80"  width="144" height="30" rx="6"/>
-            <text x="88"  y="100" class="pnode-label">test</text>
+            <text x="88"  y="100" class="pnode-label">tone</text>
           </g>
-          <g id="f-security" class="pnode pending">
+          <g id="f-clarity" class="pnode pending">
             <rect x="16"  y="118" width="144" height="30" rx="6"/>
-            <text x="88"  y="138" class="pnode-label">security scan</text>
+            <text x="88"  y="138" class="pnode-label">clarity</text>
           </g>
 
-          <!-- build -->
-          <g id="f-build" class="pnode waiting">
+          <!-- editor -->
+          <g id="f-editor" class="pnode waiting">
             <rect x="206" y="80"  width="98"  height="30" rx="6"/>
-            <text x="255" y="100" class="pnode-label">build</text>
+            <text x="255" y="100" class="pnode-label">editor</text>
           </g>
 
-          <!-- deploy -->
-          <g id="f-deploy" class="pnode waiting">
+          <!-- polish -->
+          <g id="f-polish" class="pnode waiting">
             <rect x="348" y="80"  width="98"  height="30" rx="6"/>
-            <text x="397" y="100" class="pnode-label">deploy</text>
+            <text x="397" y="100" class="pnode-label">polish</text>
           </g>
 
-          <!-- smoke-test -->
-          <g id="f-smoke" class="pnode waiting">
+          <!-- export -->
+          <g id="f-export" class="pnode waiting">
             <rect x="492" y="80"  width="186" height="30" rx="6"/>
-            <text x="585" y="100" class="pnode-label">smoke test</text>
+            <text x="585" y="100" class="pnode-label">export</text>
           </g>
         </svg>
         <button class="pipe-btn" onclick="playFull()">▶ Replay</button>
       </div>
 
       <div class="code-block">
-        <div class="code-header"><span class="code-label">Full pipeline</span><span class="code-lang">Swift</span></div>
+        <div class="code-header"><span class="code-label">Full writing pipeline</span><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">let graph = GraphOrchestrator(nodes: [
-    // Stage 1 — three independent checks run concurrently
-    GraphNode(id: "lint",     agent: lintAgent),
-    GraphNode(id: "test",     agent: testAgent),
-    GraphNode(id: "security", agent: securityAgent),
+    // Stage 1 — three independent analysis agents run concurrently
+    GraphNode(id: "grammar",  agent: grammarAgent),
+    GraphNode(id: "tone",     agent: toneAgent),
+    GraphNode(id: "clarity",  agent: clarityAgent),
 
-    // Stage 2 — build waits for all three
-    GraphNode(id: "build",  agent: buildAgent,  dependencies: ["lint", "test", "security"]),
+    // Stage 2 — editor synthesizes all three analyses
+    GraphNode(id: "editor",  agent: editorAgent,  dependencies: ["grammar", "tone", "clarity"]),
 
-    // Stage 3 — deploy waits for a clean build
-    GraphNode(id: "deploy", agent: deployAgent, dependencies: ["build"]),
+    // Stage 3 — polish agent refines the edited draft
+    GraphNode(id: "polish",  agent: polishAgent,  dependencies: ["editor"]),
 
-    // Stage 4 — smoke test waits for a live deployment
-    GraphNode(id: "smoke",  agent: smokeAgent,  dependencies: ["deploy"]),
+    // Stage 4 — export agent formats the final document
+    GraphNode(id: "export",  agent: exportAgent,  dependencies: ["polish"]),
 ])
 
-let result = try await graph.run("Release v2.1.0")
+let result = try await graph.run("Analyze and improve this draft: \(userDraft)")
 print(result.output)</code></pre>
       </div>
 
       <h2 id="parallel-execution">Parallel Execution</h2>
-      <p>The orchestrator resolves the dependency graph at runtime. In the pipeline above, <code>lint</code>, <code>test</code>, and <code>security</code> all start at the same moment — they don't wait for each other. This is the main performance benefit over running agents sequentially.</p>
+      <p>The orchestrator resolves the dependency graph at runtime. In the pipeline above, <code>grammar</code>, <code>tone</code>, and <code>clarity</code> all start at the same moment — they don't wait for each other. This is the main performance benefit over running agents sequentially, especially on device where inference time matters.</p>
 
       <div class="callout callout-tip">
         <span class="callout-icon">💡</span>
-        <div class="callout-body"><p>Nodes are declared in any order — the dependency list, not the declaration order, determines execution. Add as many independent nodes as you like; they all run concurrently.</p></div>
+        <div class="callout-body"><p>Nodes are declared in any order — the dependency list, not the declaration order, determines execution. Add as many independent analysis nodes as you like; they all run concurrently in the same process.</p></div>
       </div>
 
       <h2 id="accessing-results">Accessing Intermediate Results</h2>
-      <p><code>GraphResult</code> contains the output of every node, keyed by ID. Useful for logging, debugging, or surfacing intermediate results in your UI:</p>
+      <p><code>GraphResult</code> contains the output of every node, keyed by ID. Useful for logging, debugging, or surfacing individual analyses in your UI alongside the final synthesis:</p>
       <div class="code-block">
         <div class="code-header"><span class="code-lang">Swift</span></div>
-        <pre><code class="language-swift">let result = try await graph.run("Release v2.1.0")
+        <pre><code class="language-swift">let result = try await graph.run("Analyze and improve this draft: \(userDraft)")
 
-print(result.output)  // final node's output (smoke test summary)
+print(result.output)  // final node's output (export summary)
 
-// Inspect any intermediate node
-print(result.nodeOutputs["lint"]     ?? "")  // lint report
-print(result.nodeOutputs["security"] ?? "")  // security findings
-print(result.nodeOutputs["build"]    ?? "")  // build log</code></pre>
+// Surface individual analyses in the UI
+print(result.nodeOutputs["grammar"]  ?? "")  // grammar corrections
+print(result.nodeOutputs["tone"]     ?? "")  // tone suggestions
+print(result.nodeOutputs["editor"]   ?? "")  // synthesized edits</code></pre>
       </div>
 
       <div class="page-nav">
@@ -293,42 +290,42 @@ function setState(id, state) {
 }
 
 function playBasic() {
-  ['b-lint','b-test'].forEach(id => setState(id, 'pending'));
-  setState('b-build', 'waiting');
+  ['b-grammar','b-tone'].forEach(id => setState(id, 'pending'));
+  setState('b-editor', 'waiting');
 
-  setTimeout(() => { setState('b-lint','running'); setState('b-test','running'); }, 350);
-  setTimeout(() => { setState('b-lint','done');    setState('b-test','done');    }, 1900);
-  setTimeout(() => setState('b-build', 'running'), 2250);
-  setTimeout(() => setState('b-build', 'done'),    3800);
+  setTimeout(() => { setState('b-grammar','running'); setState('b-tone','running'); }, 350);
+  setTimeout(() => { setState('b-grammar','done');    setState('b-tone','done');    }, 1900);
+  setTimeout(() => setState('b-editor', 'running'), 2250);
+  setTimeout(() => setState('b-editor', 'done'),    3800);
 }
 
 function playFull() {
-  ['f-lint','f-test','f-security'].forEach(id => setState(id, 'pending'));
-  ['f-build','f-deploy','f-smoke'].forEach(id => setState(id, 'waiting'));
+  ['f-grammar','f-tone','f-clarity'].forEach(id => setState(id, 'pending'));
+  ['f-editor','f-polish','f-export'].forEach(id => setState(id, 'waiting'));
 
   // Stage 1 — all three fire simultaneously
   setTimeout(() => {
-    setState('f-lint',     'running');
-    setState('f-test',     'running');
-    setState('f-security', 'running');
+    setState('f-grammar',  'running');
+    setState('f-tone',     'running');
+    setState('f-clarity',  'running');
   }, 350);
   setTimeout(() => {
-    setState('f-lint',     'done');
-    setState('f-test',     'done');
-    setState('f-security', 'done');
+    setState('f-grammar',  'done');
+    setState('f-tone',     'done');
+    setState('f-clarity',  'done');
   }, 1900);
 
   // Stage 2
-  setTimeout(() => setState('f-build',  'running'), 2250);
-  setTimeout(() => setState('f-build',  'done'),    3500);
+  setTimeout(() => setState('f-editor',  'running'), 2250);
+  setTimeout(() => setState('f-editor',  'done'),    3500);
 
   // Stage 3
-  setTimeout(() => setState('f-deploy', 'running'), 3850);
-  setTimeout(() => setState('f-deploy', 'done'),    5100);
+  setTimeout(() => setState('f-polish',  'running'), 3850);
+  setTimeout(() => setState('f-polish',  'done'),    5100);
 
   // Stage 4
-  setTimeout(() => setState('f-smoke',  'running'), 5450);
-  setTimeout(() => setState('f-smoke',  'done'),    6700);
+  setTimeout(() => setState('f-export',  'running'), 5450);
+  setTimeout(() => setState('f-export',  'done'),    6700);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

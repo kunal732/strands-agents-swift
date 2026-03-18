@@ -17,14 +17,14 @@
     <article>
       <div class="breadcrumb"><a href="index.html">Home</a><span class="breadcrumb-sep">›</span><a href="multi-agent.html">Multi-Agent</a><span class="breadcrumb-sep">›</span>Swarm</div>
       <h1>Swarm</h1>
-      <p class="page-description">Agents decide at runtime who handles the next step. Execution begins at an entry point and flows through handoffs until a final answer is produced.</p>
+      <p class="page-description">Agents decide at runtime who handles the next step. Execution begins at an entry point and flows through handoffs until a final answer is produced. All agents run inside the same app on the same device.</p>
 
       <h2 id="when-to-use">When to Use Swarm</h2>
       <ul>
-        <li>The routing logic depends on the content of each response</li>
-        <li>You cannot predict the sequence of agents ahead of time</li>
-        <li>Tasks are open-ended and may need different specialists depending on what comes up</li>
-        <li>You want the model itself to decide who is best suited for each step</li>
+        <li>The routing logic depends on what the user actually asked</li>
+        <li>You cannot predict which specialist is needed ahead of time</li>
+        <li>Your app has a natural language assistant that covers several domains (calendar, notes, tasks, and so on)</li>
+        <li>You want the model itself to decide which on-device specialist handles each request</li>
       </ul>
 
       <h2 id="how-it-works">How It Works</h2>
@@ -34,61 +34,64 @@
         <div class="flow-row">
           <span class="flow-node blue">User Input</span>
           <span class="flow-arrow">→</span>
-          <span class="flow-node">triage</span>
+          <span class="flow-node">coordinator</span>
           <span class="flow-arrow">→ handoff →</span>
           <span class="flow-node purple">specialist</span>
         </div>
         <div class="flow-row" style="margin-top: 0.5rem; padding-left: 20rem;">
           <span class="flow-arrow">→ handoff →</span>
-          <span class="flow-node green">writer</span>
+          <span class="flow-node green">responder</span>
           <span class="flow-arrow">→</span>
           <span class="flow-node blue">Final Response</span>
         </div>
       </div>
 
       <h2 id="basic-example">Basic Example</h2>
+      <p>An in-app personal assistant on iOS or macOS. The user can ask anything in natural language. A coordinator agent reads the intent and routes to the right on-device specialist: calendar (EventKit), notes (local notes store), or tasks (Reminders).</p>
       <div class="code-block">
-        <div class="code-header"><span class="code-label">Triage → Specialist → Writer</span><span class="code-lang">Swift</span></div>
+        <div class="code-header"><span class="code-label">Personal assistant with on-device routing</span><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">import StrandsAgents
 
-let triageAgent = Agent(
+let coordinatorAgent = Agent(
     model: provider,
     systemPrompt: """
-    You triage incoming requests and hand off to the right specialist.
-    Available specialists:
-    - "swift-expert": Swift language and SDK questions
-    - "cloud-expert": AWS, cloud infrastructure, networking
-    - "writer": Turning technical content into clear prose
+    You are a personal assistant coordinator. Read the user's request and hand off to the right specialist:
+    - "calendar-agent": scheduling, events, reminders, availability
+    - "notes-agent": creating or finding notes, saving information
+    - "tasks-agent": to-do items, task lists, Reminders
     Hand off immediately — do not try to answer yourself.
     """
 )
 
-let swiftExpert = Agent(
+let calendarAgent = Agent(
     model: provider,
-    systemPrompt: "You are a Swift language expert. Answer in depth with code examples. Hand off to 'writer' when done."
+    tools: [readCalendar, createEvent, checkAvailability],
+    systemPrompt: "You manage the user's calendar using EventKit. Create events, check availability, and answer scheduling questions."
 )
 
-let cloudExpert = Agent(
+let notesAgent = Agent(
     model: provider,
-    systemPrompt: "You are an AWS and cloud infrastructure expert. Give precise, actionable answers. Hand off to 'writer' when done."
+    tools: [searchNotes, createNote, appendToNote],
+    systemPrompt: "You manage the user's notes. Search existing notes and create new ones on request."
 )
 
-let writerAgent = Agent(
+let tasksAgent = Agent(
     model: provider,
-    systemPrompt: "You take expert technical content and rewrite it as clear, well-structured prose for developers."
+    tools: [listReminders, createReminder, completeReminder],
+    systemPrompt: "You manage the user's task lists using the Reminders store. Add, complete, and list tasks."
 )
 
 let swarm = SwarmOrchestrator(
     members: [
-        SwarmMember(id: "triage",       description: "Routes requests to the right specialist", agent: triageAgent),
-        SwarmMember(id: "swift-expert",  description: "Answers Swift language questions",         agent: swiftExpert),
-        SwarmMember(id: "cloud-expert",  description: "Answers cloud and AWS questions",          agent: cloudExpert),
-        SwarmMember(id: "writer",        description: "Writes the final polished response",        agent: writerAgent),
+        SwarmMember(id: "coordinator",    description: "Routes requests to the right on-device specialist", agent: coordinatorAgent),
+        SwarmMember(id: "calendar-agent", description: "Manages calendar events and availability",          agent: calendarAgent),
+        SwarmMember(id: "notes-agent",    description: "Creates and searches notes",                        agent: notesAgent),
+        SwarmMember(id: "tasks-agent",    description: "Manages Reminders and to-do lists",                 agent: tasksAgent),
     ],
-    entryPoint: "triage"
+    entryPoint: "coordinator"
 )
 
-let result = try await swarm.run("How do I deploy a Swift Vapor app on AWS Lambda?")
+let result = try await swarm.run("Schedule a team lunch for Friday at noon")
 print(result.output)</code></pre>
       </div>
 
@@ -101,62 +104,63 @@ print(result.output)</code></pre>
       </div>
 
       <h2 id="entry-point">Entry Point</h2>
-      <p>The <code>entryPoint</code> parameter specifies which agent receives the user's initial message. Usually this is a triage or router agent that assesses the task and delegates, but it can be any member:</p>
+      <p>The <code>entryPoint</code> parameter specifies which agent receives the user's initial message. Usually this is a coordinator or router agent that assesses the task and delegates, but it can be any member:</p>
       <div class="code-block">
         <div class="code-header"><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">// Start directly at a specialist for focused tasks
 let swarm = SwarmOrchestrator(
     members: [
-        SwarmMember(id: "analyst", description: "Analyzes data",   agent: analystAgent),
-        SwarmMember(id: "writer",  description: "Writes reports",  agent: writerAgent),
+        SwarmMember(id: "calendar-agent", description: "Manages calendar events", agent: calendarAgent),
+        SwarmMember(id: "tasks-agent",    description: "Manages Reminders",        agent: tasksAgent),
     ],
-    entryPoint: "analyst"  // skip triage — always start with the analyst
+    entryPoint: "calendar-agent"  // skip coordinator — always start with calendar
 )</code></pre>
       </div>
 
-      <h2 id="real-world-example">Real-World Example: Customer Support Swarm</h2>
+      <h2 id="real-world-example">Real-World Example: Fitness App Assistant</h2>
+      <p>A fitness app with a natural language assistant. The user asks about workouts, nutrition, or recovery. A triage agent reads the intent and routes to the right specialist — each with its own tools and on-device data.</p>
       <div class="code-block">
-        <div class="code-header"><span class="code-label">Support triage system</span><span class="code-lang">Swift</span></div>
-        <pre><code class="language-swift">let triageBot = Agent(
+        <div class="code-header"><span class="code-label">Fitness assistant swarm</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">let triageAgent = Agent(
     model: provider,
     systemPrompt: """
-    You are a support triage agent. Classify the user's request and hand off:
-    - Billing questions → "billing-agent"
-    - Technical issues → "technical-agent"
-    - Account questions → "account-agent"
-    Do not answer. Only triage and hand off.
+    You are a fitness assistant coordinator. Read the user's request and hand off:
+    - Exercise and training → "workout-agent"
+    - Food, calories, macros → "nutrition-agent"
+    - Rest, soreness, sleep → "recovery-agent"
+    Do not answer directly. Triage and hand off.
     """
 )
 
-let billingAgent = Agent(
+let workoutAgent = Agent(
     model: provider,
-    tools: [lookupInvoice, issueRefund],
-    systemPrompt: "You handle billing issues. You have tools to look up invoices and issue refunds."
+    tools: [readWorkoutHistory, suggestExercise, logWorkout],
+    systemPrompt: "You are a personal trainer. Review the user's workout history and suggest or log training sessions."
 )
 
-let technicalAgent = Agent(
+let nutritionAgent = Agent(
     model: provider,
-    tools: [searchDocs, checkSystemStatus],
-    systemPrompt: "You resolve technical issues. Search the docs and check system status to diagnose problems."
+    tools: [readFoodLog, searchFoodDatabase, logMeal],
+    systemPrompt: "You are a nutrition coach. Help the user track calories and macros and suggest meals aligned with their goals."
 )
 
-let accountAgent = Agent(
+let recoveryAgent = Agent(
     model: provider,
-    tools: [lookupAccount, resetPassword],
-    systemPrompt: "You handle account questions — password resets, profile updates, account status."
+    tools: [readSleepData, readHeartRateVariability, suggestRecovery],
+    systemPrompt: "You are a recovery specialist. Review the user's sleep and HRV data and suggest rest or active recovery activities."
 )
 
 let swarm = SwarmOrchestrator(
     members: [
-        SwarmMember(id: "triage",    description: "Classifies and routes support requests", agent: triageBot),
-        SwarmMember(id: "billing",   description: "Handles billing and payment issues",      agent: billingAgent),
-        SwarmMember(id: "technical", description: "Resolves technical problems",             agent: technicalAgent),
-        SwarmMember(id: "account",   description: "Manages account settings",                agent: accountAgent),
+        SwarmMember(id: "triage",           description: "Routes fitness questions to the right specialist", agent: triageAgent),
+        SwarmMember(id: "workout-agent",    description: "Plans and logs workouts",                          agent: workoutAgent),
+        SwarmMember(id: "nutrition-agent",  description: "Tracks food and recommends meals",                 agent: nutritionAgent),
+        SwarmMember(id: "recovery-agent",   description: "Advises on rest and recovery",                     agent: recoveryAgent),
     ],
     entryPoint: "triage"
 )
 
-let result = try await swarm.run("I was charged twice for my subscription last month")
+let result = try await swarm.run("I feel sore today. Should I work out or rest?")
 print(result.output)</code></pre>
       </div>
 

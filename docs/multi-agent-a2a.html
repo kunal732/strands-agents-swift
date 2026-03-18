@@ -17,109 +17,113 @@
     <article>
       <div class="breadcrumb"><a href="index.html">Home</a><span class="breadcrumb-sep">›</span><a href="multi-agent.html">Multi-Agent</a><span class="breadcrumb-sep">›</span>Agent-to-Agent (A2A)</div>
       <h1>Agent-to-Agent (A2A)</h1>
-      <p class="page-description">Agents in different processes or services communicate over HTTP. A remote agent looks exactly like a local tool — callers don't need to know where it lives.</p>
+      <p class="page-description">Your iOS or macOS app has an on-device agent for fast, private, offline-capable responses. For tasks that are too heavy for the device, the on-device agent delegates to a backend agent your team hosts. A2A is the bridge between your app and your backend. The remote agent looks exactly like a local tool to the caller.</p>
 
       <h2 id="when-to-use">When to Use A2A</h2>
       <ul>
-        <li>Agents are deployed as separate services (microservices, lambdas, containers)</li>
-        <li>You want to call a Python or TypeScript Strands agent from Swift</li>
-        <li>You need to reuse an agent across multiple apps or platforms</li>
-        <li>An agent requires different hardware (e.g. a GPU server for image generation)</li>
+        <li>Private or offline tasks stay on device -- only heavy work goes to the backend</li>
+        <li>A task is too compute-intensive for the device (processing a 200-page document, complex multi-step research)</li>
+        <li>Your backend ML team built their agent in Python or TypeScript Strands SDK and you want to call it from Swift without either team changing how they write agents</li>
+        <li>A task requires a specialized model that only runs on your backend server</li>
       </ul>
 
       <h2 id="how-it-works">How It Works</h2>
       <div class="flow">
         <div class="flow-row">
-          <span class="flow-node blue">App (Swift)</span>
+          <span class="flow-node blue">App (Swift, on-device)</span>
           <span class="flow-arrow">→ A2AClient (tool call) →</span>
           <span class="flow-node purple">HTTP POST</span>
           <span class="flow-arrow">→</span>
           <span class="flow-node">A2AServer</span>
           <span class="flow-arrow">→</span>
-          <span class="flow-node green">Remote Agent</span>
+          <span class="flow-node green">Backend Agent</span>
         </div>
         <div class="flow-row" style="margin-top: 0.5rem;">
-          <span class="flow-label">The local agent sees A2AClient as a regular tool. The remote agent is unaware it is being called remotely.</span>
+          <span class="flow-label">The on-device agent sees A2AClient as a regular tool. The backend agent is unaware it is being called remotely.</span>
         </div>
       </div>
 
-      <h2 id="serving-an-agent">Serving an Agent</h2>
-      <p>Wrap any agent in an <code>A2AServer</code> to expose it over HTTP. The server handles request parsing, agent invocation, and response serialization:</p>
+      <h2 id="serving-an-agent">Serving a Backend Agent</h2>
+      <p>Your team's backend service wraps an agent in an <code>A2AServer</code> to expose it over HTTP. The server handles request parsing, agent invocation, and response serialization:</p>
       <div class="code-block">
-        <div class="code-header"><span class="code-label">research-service/main.swift</span><span class="code-lang">Swift</span></div>
+        <div class="code-header"><span class="code-label">backend-service/main.swift</span><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">import StrandsAgents
 
-/// Search the web for current information on a topic.
+/// Process a long document and return a structured summary.
 @Tool
-func searchWeb(query: String) async throws -> String {
-    // your search API call here
-    return "Results for: \(query)"
+func processDocument(content: String) async throws -> String {
+    // heavy document processing -- appropriate for a backend server
+    return "Summary: ..."
 }
 
-let researchAgent = Agent(
+let documentAgent = Agent(
     model: try BedrockProvider(config: BedrockConfig(
         modelId: "us.anthropic.claude-sonnet-4-20250514-v1:0"
     )),
-    tools: [searchWeb],
-    systemPrompt: "You are a research assistant. Search the web and summarize findings concisely."
+    tools: [processDocument],
+    systemPrompt: "You are a document analysis agent. Process long documents and return concise structured summaries."
 )
 
-// Expose the agent on port 8080
-let server = A2AServer(agent: researchAgent, name: "Research Agent", port: 8080)
-try await server.start()
-// Server runs at http://localhost:8080</code></pre>
+// Your backend service exposes this agent on port 8080
+let server = A2AServer(agent: documentAgent, name: "Document Agent", port: 8080)
+try await server.start()</code></pre>
       </div>
 
-      <h2 id="calling-a-remote-agent">Calling a Remote Agent</h2>
-      <p>Create an <code>A2AClient</code> with the endpoint URL. Pass it to <code>Agent(tools:)</code> — it behaves like any other tool from the caller's perspective:</p>
+      <h2 id="calling-a-remote-agent">Calling the Backend from Your App</h2>
+      <p>Your iOS or macOS app creates an <code>A2AClient</code> pointing at the backend. Pass it to the on-device agent's tool list -- it behaves exactly like a local tool from the caller's perspective:</p>
       <div class="code-block">
-        <div class="code-header"><span class="code-label">main-app/main.swift</span><span class="code-lang">Swift</span></div>
+        <div class="code-header"><span class="code-label">YourApp/AssistantView.swift</span><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">import StrandsAgents
 
-// Point at the remote research agent
-let remoteResearcher = A2AClient(
-    name: "research",
-    description: "Search the web and summarize information on any topic",
-    endpoint: URL(string: "http://research-service:8080")!
+// Point at your team's backend document agent
+let backendDocumentAgent = A2AClient(
+    name: "analyze_document",
+    description: "Process a long document on the backend and return a structured summary",
+    endpoint: URL(string: "https://agents.yourteam.com/documents")!
 )
 
-// The local agent calls the remote agent exactly like a local tool
-let agent = Agent(
-    model: try BedrockProvider(config: BedrockConfig(
-        modelId: "us.anthropic.claude-sonnet-4-20250514-v1:0"
-    )),
-    tools: [remoteResearcher, writeDocument],
-    systemPrompt: "You write detailed reports. Use the research tool to gather information first."
+// The on-device agent delegates heavy document work to the backend
+// and handles lightweight questions itself
+let onDeviceAgent = Agent(
+    model: try MLXProvider(modelId: "mlx-community/Qwen3-4B-4bit"),
+    tools: [backendDocumentAgent, searchLocalNotes, readCalendar],
+    systemPrompt: """
+    You are a personal assistant running on device.
+    For lightweight questions, answer directly.
+    For long documents or intensive analysis, use the analyze_document tool to delegate to the backend.
+    """
 )
 
-let result = try await agent.run("Write a report on the current state of Swift concurrency")
+let result = try await onDeviceAgent.run("Summarize the 200-page contract I just uploaded")
 print(result.output)</code></pre>
       </div>
 
-      <h2 id="cross-language">Cross-Language Agents</h2>
-      <p>A2A is language-agnostic. A Swift app can call a Python Strands agent, and vice versa. The only requirement is that both sides implement the A2A HTTP protocol:</p>
+      <h2 id="cross-language">Working with Your Backend Team</h2>
+      <p>Your app is Swift. Your backend ML team built their agent in Python Strands SDK. A2A connects them without either team changing how they write agents -- the Swift app calls the Python backend over HTTP, and the Python agent serves responses with no knowledge of the Swift caller:</p>
       <div class="code-block">
-        <div class="code-header"><span class="code-label">Calling a Python Strands agent from Swift</span><span class="code-lang">Swift</span></div>
-        <pre><code class="language-swift">// Python service running at research.internal:8080
-// (deployed with the Python Strands SDK's A2A server)
-let pythonAgent = A2AClient(
-    name: "python_researcher",
-    description: "A Python-based research agent with access to specialized databases",
-    endpoint: URL(string: "https://research.internal:8080")!
+        <div class="code-header"><span class="code-label">Calling your team's Python backend agent from Swift</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">// Your team's Python Strands agent, served at agents.yourteam.com
+// The Python team wrote and deployed it independently
+let pythonBackendAgent = A2AClient(
+    name: "ml_analysis",
+    description: "Run complex ML analysis using the backend's specialized models and data",
+    endpoint: URL(string: "https://agents.yourteam.com/ml")!,
+    bearerToken: authToken  // your app's credentials
 )
 
-let swiftAgent = Agent(model: provider, tools: [pythonAgent])
-let result = try await swiftAgent.run("What papers were published on LLM agents in 2024?")</code></pre>
+// On-device Swift agent delegates ML-heavy work to the Python backend
+let onDeviceAgent = Agent(model: localProvider, tools: [pythonBackendAgent])
+let result = try await onDeviceAgent.run("Analyze the trends in my health data over the past year")</code></pre>
       </div>
 
       <h2 id="authentication">Authentication</h2>
-      <p>Pass a bearer token or other credentials when creating the client. The token is included in every request to the remote agent:</p>
+      <p>Pass a bearer token or other credentials when creating the client. The token is included in every request to the backend agent:</p>
       <div class="code-block">
         <div class="code-header"><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">let client = A2AClient(
-    name: "secure_agent",
-    description: "An agent behind an auth wall",
-    endpoint: URL(string: "https://agents.example.com/researcher")!,
+    name: "secure_backend",
+    description: "Your team's backend agent behind auth",
+    endpoint: URL(string: "https://agents.yourteam.com/assistant")!,
     bearerToken: "eyJhbGciOiJSUzI1NiJ9..."
 )</code></pre>
       </div>
@@ -128,18 +132,18 @@ let result = try await swiftAgent.run("What papers were published on LLM agents 
       <table>
         <thead><tr><th></th><th>Graph / Swarm</th><th>A2A</th></tr></thead>
         <tbody>
-          <tr><td>Agent location</td><td>Same process</td><td>Any process or host</td></tr>
+          <tr><td>Agent location</td><td>Same device, same process</td><td>Your backend server</td></tr>
           <tr><td>Communication</td><td>In-memory function calls</td><td>HTTP</td></tr>
           <tr><td>Languages</td><td>Swift only</td><td>Python, TypeScript, Swift, any</td></tr>
           <tr><td>Latency</td><td>Microseconds</td><td>Network round-trip</td></tr>
-          <tr><td>Independent deploy</td><td>No</td><td>Yes</td></tr>
-          <tr><td>Scaling</td><td>Single process</td><td>Independent horizontal scaling</td></tr>
+          <tr><td>Works offline</td><td>Yes (local model)</td><td>No (requires network)</td></tr>
+          <tr><td>Data privacy</td><td>Stays on device</td><td>Sent to your backend</td></tr>
         </tbody>
       </table>
 
       <div class="callout callout-tip">
         <span class="callout-icon">💡</span>
-        <div class="callout-body"><p>Use A2A with Graph or Swarm — they are not mutually exclusive. A graph node can be an A2A client, and a swarm member can hand off to a remote agent over A2A.</p></div>
+        <div class="callout-body"><p>Use A2A with Graph or Swarm -- they are not mutually exclusive. A graph node can be an A2A client, and a swarm member can hand off to a backend agent over A2A.</p></div>
       </div>
 
       <div class="page-nav">

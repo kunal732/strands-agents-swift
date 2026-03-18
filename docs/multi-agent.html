@@ -17,15 +17,15 @@
     <article>
       <div class="breadcrumb"><a href="index.html">Home</a><span class="breadcrumb-sep">›</span>Multi-Agent</div>
       <h1>Multi-Agent</h1>
-      <p class="page-description">Break complex tasks into pieces, each handled by a specialized agent. Agents coordinate so the combined result is better than any one agent alone.</p>
+      <p class="page-description">A single agent handles one task at a time. Multi-agent lets you run several specialized agents inside your app — each focused on one thing — and combine their results. All agents run in the same process on the same device.</p>
 
       <h2 id="why-multi-agent">Why Multi-Agent?</h2>
       <p>A single agent handles one task at a time with one context window. Multi-agent systems let you:</p>
       <ul>
         <li><strong>Specialize</strong> — give each agent a focused system prompt and only the tools it needs</li>
-        <li><strong>Parallelize</strong> — run independent subtasks at the same time</li>
-        <li><strong>Scale</strong> — distribute agents across services or machines</li>
+        <li><strong>Parallelize</strong> — run independent subtasks at the same time, on device</li>
         <li><strong>Compose</strong> — chain the output of one agent into the input of another</li>
+        <li><strong>Bridge</strong> — delegate heavy work from your on-device agent to a backend agent your team hosts</li>
       </ul>
 
       <h2 id="coordination-models">Coordination Models</h2>
@@ -34,74 +34,73 @@
       <div class="comparison-grid">
         <a class="comparison-card card" href="multi-agent-graph.html" style="text-decoration:none;">
           <h3>Graph <span class="badge badge-swift" style="float:right">DAG</span></h3>
-          <div class="tagline">Fixed pipeline with parallel steps</div>
+          <div class="tagline">Parallel analysis in the same app</div>
           <ul>
             <li>Workflow is known up front</li>
             <li>Independent nodes run in parallel</li>
             <li>Dependent nodes wait automatically</li>
-            <li>Predictable, auditable execution</li>
+            <li>Run multiple focused agents on the same data simultaneously</li>
           </ul>
         </a>
         <a class="comparison-card card" href="multi-agent-swarm.html" style="text-decoration:none;">
           <h3>Swarm <span class="badge badge-local" style="float:right">Dynamic</span></h3>
-          <div class="tagline">Agents hand off to each other at runtime</div>
+          <div class="tagline">In-app routing to the right specialist</div>
           <ul>
             <li>Routing decided by the model</li>
-            <li>Any agent can hand off to another</li>
-            <li>Handles open-ended tasks</li>
+            <li>A coordinator agent hands off to whichever specialist fits</li>
+            <li>Handles open-ended user requests</li>
             <li>Flexible but less predictable</li>
           </ul>
         </a>
         <a class="comparison-card card" href="multi-agent-a2a.html" style="text-decoration:none;">
           <h3>A2A <span class="badge badge-cloud" style="float:right">HTTP</span></h3>
-          <div class="tagline">Agents across process boundaries</div>
+          <div class="tagline">On-device + backend</div>
           <ul>
-            <li>Agents live in separate services</li>
-            <li>Communicate over HTTP</li>
-            <li>Remote agent looks like a tool</li>
-            <li>Language and platform agnostic</li>
+            <li>Your app's local agent delegates heavy work to a cloud agent your team hosts</li>
+            <li>Remote agent looks like a local tool</li>
+            <li>Backend can be Python or TypeScript Strands SDK</li>
+            <li>Private tasks stay on device; intensive tasks go to the backend</li>
           </ul>
         </a>
       </div>
 
-      <h2 id="choosing-a-model">Choosing a Model</h2>
+      <h2 id="choosing-a-model">Choosing a Coordination Model</h2>
       <table>
         <thead><tr><th>Question</th><th>Answer → Use</th></tr></thead>
         <tbody>
           <tr><td>Do I know all the steps in advance?</td><td>Yes → <a href="multi-agent-graph.html">Graph</a></td></tr>
-          <tr><td>Should some steps run in parallel?</td><td>Yes → <a href="multi-agent-graph.html">Graph</a></td></tr>
-          <tr><td>Does routing depend on the content of each step?</td><td>Yes → <a href="multi-agent-swarm.html">Swarm</a></td></tr>
-          <tr><td>Are some agents in separate services or processes?</td><td>Yes → <a href="multi-agent-a2a.html">A2A</a></td></tr>
-          <tr><td>Do I need to call an agent from another language's SDK?</td><td>Yes → <a href="multi-agent-a2a.html">A2A</a></td></tr>
+          <tr><td>Should some steps run in parallel on device?</td><td>Yes → <a href="multi-agent-graph.html">Graph</a></td></tr>
+          <tr><td>Does routing depend on what the user actually asked?</td><td>Yes → <a href="multi-agent-swarm.html">Swarm</a></td></tr>
+          <tr><td>Is one task too heavy or private to run on device?</td><td>Yes → <a href="multi-agent-a2a.html">A2A</a></td></tr>
+          <tr><td>Does my backend team use Python or TypeScript Strands?</td><td>Yes → <a href="multi-agent-a2a.html">A2A</a></td></tr>
         </tbody>
       </table>
 
       <h2 id="agents-as-tools">Agents as Tools</h2>
       <p>All three models build on the same primitive: an agent can use another agent as a tool. The outer agent calls the inner agent just like any other tool call — it doesn't need to know how the inner agent works.</p>
       <div class="code-block">
-        <div class="code-header"><span class="code-label">Inner agent as a tool</span><span class="code-lang">Swift</span></div>
-        <pre><code class="language-swift">// A specialized research agent
-let researchAgent = Agent(
+        <div class="code-header"><span class="code-label">Writing assistant using a grammar agent as a tool</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">// A specialized agent that checks grammar and style
+let grammarAgent = Agent(
     model: provider,
-    tools: [searchWeb, fetchPage],
-    systemPrompt: "You are a research assistant. Search the web and summarize findings."
+    systemPrompt: "You are a grammar expert. Review the text and return a concise list of corrections."
 )
 
 // Wrap it as a tool the outer agent can call
-let researchTool = AgentTool(
-    name: "research",
-    description: "Research a topic on the web and return a summary",
-    agent: researchAgent
+let grammarTool = AgentTool(
+    name: "grammar_check",
+    description: "Check grammar and style in a passage of text and return corrections",
+    agent: grammarAgent
 )
 
-// Outer agent uses the research agent as a tool
-let mainAgent = Agent(
+// The writing assistant uses the grammar agent as one of its tools
+let writingAssistant = Agent(
     model: provider,
-    tools: [researchTool, writeDocument],
-    systemPrompt: "You write detailed reports. Use the research tool to gather information."
+    tools: [grammarTool, suggestTitle],
+    systemPrompt: "You help users improve their writing. Use the grammar_check tool to catch errors, then provide overall feedback."
 )
 
-let result = try await mainAgent.run("Write a report on the history of Swift")</code></pre>
+let result = try await writingAssistant.run("Review my draft: \(userDraft)")</code></pre>
       </div>
 
       <h2 id="next-steps">Deep Dives</h2>
@@ -109,17 +108,17 @@ let result = try await mainAgent.run("Write a report on the history of Swift")</
         <a class="card" href="multi-agent-graph.html">
           <div class="card-icon">🔗</div>
           <h3>Graph</h3>
-          <p>DAG-based pipelines with parallel execution and explicit dependencies.</p>
+          <p>DAG-based pipelines with parallel execution and explicit dependencies — all on device.</p>
         </a>
         <a class="card" href="multi-agent-swarm.html">
           <div class="card-icon">🐝</div>
           <h3>Swarm</h3>
-          <p>Dynamic routing where agents hand off to each other at runtime.</p>
+          <p>Dynamic in-app routing where a coordinator hands off to the right specialist at runtime.</p>
         </a>
         <a class="card" href="multi-agent-a2a.html">
           <div class="card-icon">🌐</div>
           <h3>Agent-to-Agent (A2A)</h3>
-          <p>Cross-process and cross-service agent communication over HTTP.</p>
+          <p>Bridge your on-device agent to a backend agent your team hosts, over HTTP.</p>
         </a>
       </div>
 
