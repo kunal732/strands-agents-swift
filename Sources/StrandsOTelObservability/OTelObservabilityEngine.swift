@@ -2,6 +2,8 @@ import Foundation
 import StrandsAgents
 import OpenTelemetryApi
 import OpenTelemetrySdk
+import OpenTelemetryProtocolExporterHttp
+import OpenTelemetryProtocolExporterCommon
 
 /// OpenTelemetry-based observability engine for Strands agents.
 ///
@@ -31,6 +33,57 @@ public final class OTelObservabilityEngine: StrandsAgents.ObservabilityEngine, @
     ) {
         self.tracer = tracer
         self.redactor = redactor
+    }
+
+    // MARK: - Convenience factories
+
+    /// Create an engine pre-configured for Datadog LLM Observability.
+    ///
+    /// Sends traces to Datadog's OTLP intake using the `gen_ai` semantic conventions
+    /// that Datadog's LLM Observability product reads natively.
+    ///
+    /// ```swift
+    /// let agent = Agent(
+    ///     model: provider,
+    ///     observability: OTelObservabilityEngine.datadog(
+    ///         apiKey: ProcessInfo.processInfo.environment["DD_API_KEY"] ?? "",
+    ///         service: "my-app"
+    ///     )
+    /// )
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - apiKey: Your Datadog API key.
+    ///   - service: The service name shown in Datadog (e.g. your app's bundle identifier).
+    ///   - version: Optional service version string.
+    ///   - site: Datadog site. Defaults to US1 (`datadoghq.com`). Use `datadoghq.eu` for EU.
+    ///   - redactor: Optional content redactor for sensitive prompt data.
+    /// - Returns: A configured `OTelObservabilityEngine` ready to attach to an agent.
+    public static func datadog(
+        apiKey: String,
+        service: String,
+        version: String = "1.0",
+        site: String = "datadoghq.com",
+        redactor: (any StrandsAgents.ContentRedactor)? = nil
+    ) -> OTelObservabilityEngine {
+        let endpoint = URL(string: "https://otlp.\(site)/v1/traces")!
+        let config = OtlpConfiguration(
+            headers: [
+                ("dd-api-key", apiKey),
+                ("dd-otlp-source", "llmobs"),
+            ]
+        )
+        let exporter = OtlpHttpTraceExporter(endpoint: endpoint, config: config)
+        let provider = TracerProviderBuilder()
+            .add(spanProcessor: BatchSpanProcessor(spanExporter: exporter))
+            .with(resource: Resource(attributes: [
+                ResourceAttributes.serviceName.rawValue: AttributeValue.string(service),
+                ResourceAttributes.serviceVersion.rawValue: AttributeValue.string(version),
+            ]))
+            .build()
+        OpenTelemetry.registerTracerProvider(tracerProvider: provider)
+        let tracer = provider.get(instrumentationName: service, instrumentationVersion: version)
+        return OTelObservabilityEngine(tracer: tracer, redactor: redactor)
     }
 
     // MARK: - ObservabilityEngine

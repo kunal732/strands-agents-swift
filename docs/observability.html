@@ -79,47 +79,58 @@
       </div>
 
       <div class="code-block">
-        <div class="code-header"><span class="code-label">Datadog OTLP configuration</span><span class="code-lang">Swift</span></div>
+        <div class="code-header"><span class="code-label">Datadog setup</span><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">import StrandsAgents
 import StrandsBedrockProvider
 import StrandsOTelObservability
-import OpenTelemetryApi
-import OpenTelemetrySdk
-import OpenTelemetryProtocolExporterHTTP
 
-let ddApiKey = ProcessInfo.processInfo.environment["DD_API_KEY"] ?? ""
-
-// Configure the OTLP/HTTP exporter pointed at Datadog's intake
-let configuration = OtlpConfiguration(
-    endpoint: "https://otlp.datadoghq.com/v1/traces",
-    headers: [
-        ("dd-api-key", ddApiKey),
-        ("dd-otlp-source", "llmobs"),
-    ]
-)
-let exporter = OtlpHttpTraceExporter(configuration: configuration)
-
-let tracerProvider = TracerProviderBuilder()
-    .add(spanProcessor: BatchSpanProcessor(spanExporter: exporter))
-    .build()
-OpenTelemetry.registerTracerProvider(tracerProvider: tracerProvider)
-
-let tracer = tracerProvider.get(
-    instrumentationName: "my-app",
-    instrumentationVersion: "1.0"
-)
-
-// Pass the engine to your agent
 let agent = Agent(
     model: try BedrockProvider(config: BedrockConfig(
         modelId: "us.anthropic.claude-sonnet-4-20250514-v1:0"
     )),
     tools: [myTool],
-    observability: OTelObservabilityEngine(tracer: tracer)
+    observability: OTelObservabilityEngine.datadog(
+        apiKey: ProcessInfo.processInfo.environment["DD_API_KEY"] ?? "",
+        service: "my-app"
+    )
 )
 
 let result = try await agent.run("What is 42 * 17?")
 // Traces appear in Datadog LLM Observability within seconds</code></pre>
+      </div>
+
+      <div class="callout callout-tip">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body">
+          <p>The <code>.datadog()</code> factory configures the OTLP/HTTP exporter, sets up a <code>BatchSpanProcessor</code>, registers the tracer provider, and attaches the service name and version as OTel resource attributes. For EU accounts, pass <code>site: "datadoghq.eu"</code>.</p>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Full options</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">OTelObservabilityEngine.datadog(
+    apiKey: "your-dd-api-key",
+    service: "my-app",        // shows as service name in Datadog
+    version: "2.1.0",         // optional, defaults to "1.0"
+    site: "datadoghq.eu"      // optional, defaults to "datadoghq.com"
+)</code></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Manual setup (any OTLP backend)</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">import OpenTelemetrySdk
+import OpenTelemetryProtocolExporterHttp
+
+let exporter = OtlpHttpTraceExporter(
+    endpoint: URL(string: "http://localhost:4317")!
+)
+let provider = TracerProviderBuilder()
+    .add(spanProcessor: BatchSpanProcessor(spanExporter: exporter))
+    .build()
+OpenTelemetry.registerTracerProvider(tracerProvider: provider)
+
+let tracer = provider.get(instrumentationName: "my-app", instrumentationVersion: "1.0")
+let observability = OTelObservabilityEngine(tracer: tracer)</code></pre>
       </div>
 
       <div class="callout callout-note">
