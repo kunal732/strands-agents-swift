@@ -221,12 +221,19 @@ let result = try await agent.run("What is 42 * 17?")
       <h4 id="ddot-collector">Option B: Datadog DDOT Collector</h4>
       <p>Datadog's own <a href="https://docs.datadoghq.com/opentelemetry/setup/ddot_collector/" target="_blank">DDOT Collector</a> (Datadog Distribution of the OpenTelemetry Collector) is the recommended production option. Unlike Lambda, it is a long-running process that handles batching, retry queues, and buffering correctly. It also maps OTel attributes to Datadog's data model more precisely and integrates with Datadog Fleet Automation for remote configuration.</p>
 
-      <h5>Step 1: Install the DDOT Collector</h5>
-      <p>The DDOT Collector ships as part of the Datadog Agent. Install it on any server, VM, or container host where you want to run the proxy:</p>
+      <h5>Step 1: Deploy the DDOT Collector on your server</h5>
+      <p>The Collector runs on a server you control -- an EC2 instance, an ECS service, a VM, or any Linux host. Your iOS/macOS app sends traces to it over HTTPS. The Collector holds the Datadog API key and forwards to Datadog. The key never leaves your infrastructure.</p>
 
       <div class="code-block">
-        <div class="code-header"><span class="code-label">Docker (quickest)</span><span class="code-lang">bash</span></div>
+        <div class="code-header"><span class="code-label">Install on a Linux server (EC2, VM, etc.)</span><span class="code-lang">bash</span></div>
+        <pre><code class="language-bash">DD_API_KEY=your_api_key DD_SITE=datadoghq.com \
+  bash -c "$(curl -L https://install.datadoghq.com/scripts/install_script_agent7.sh)"</code></pre>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Or run with Docker on your server</span><span class="code-lang">bash</span></div>
         <pre><code class="language-bash">docker run -d \
+  --name ddot-collector \
   -e DD_API_KEY=your_api_key \
   -e DD_SITE=datadoghq.com \
   -p 4318:4318 \
@@ -234,33 +241,22 @@ let result = try await agent.run("What is 42 * 17?")
   gcr.io/datadoghq/agent:latest</code></pre>
       </div>
 
-      <div class="code-block">
-        <div class="code-header"><span class="code-label">macOS / Linux (Datadog Agent)</span><span class="code-lang">bash</span></div>
-        <pre><code class="language-bash"># Install the Datadog Agent (includes DDOT Collector)
-DD_API_KEY=your_api_key DD_SITE=datadoghq.com \
-  bash -c "$(curl -L https://s3.amazonaws.com/dd-agent/scripts/install_mac_os.sh)"
-
-# Or on Linux:
-DD_API_KEY=your_api_key DD_SITE=datadoghq.com \
-  bash -c "$(curl -L https://install.datadoghq.com/scripts/install_script_agent7.sh)"</code></pre>
-      </div>
-
-      <h5>Step 2: Configure the Collector to receive OTLP and forward to Datadog</h5>
-      <p>Create an <code>otel-config.yaml</code> file. The Collector receives OTLP from your app on port 4318 and forwards to Datadog with the API key injected server-side:</p>
+      <h5>Step 2: Configure the Collector</h5>
+      <p>Create <code>otel-config.yaml</code> on the server. The Collector listens for OTLP on port 4318 and forwards to Datadog with the API key it holds server-side:</p>
 
       <div class="code-block">
-        <div class="code-header"><span class="code-label">otel-config.yaml</span><span class="code-lang">yaml</span></div>
+        <div class="code-header"><span class="code-label">otel-config.yaml (on the server)</span><span class="code-lang">yaml</span></div>
         <pre><code>receivers:
   otlp:
     protocols:
       http:
-        endpoint: 0.0.0.0:4318   # your Swift app sends here
+        endpoint: 0.0.0.0:4318
 
 exporters:
   datadog:
     api:
       key: ${env:DD_API_KEY}
-      site: datadoghq.com        # use datadoghq.eu for EU
+      site: datadoghq.com   # use datadoghq.eu for EU
 
 service:
   pipelines:
@@ -269,31 +265,24 @@ service:
       exporters: [datadog]</code></pre>
       </div>
 
-      <h5>Step 3: Point the Swift SDK at the Collector</h5>
-      <p>Once the Collector is running and accessible, pass its OTLP endpoint to the SDK. No credentials go in the app:</p>
+      <p>Put a TLS-terminating load balancer or reverse proxy (nginx, ALB) in front of port 4318 so your app connects over HTTPS. The Collector endpoint should never be HTTP on a public IP.</p>
+
+      <h5>Step 3: Point the Swift SDK at your server</h5>
+      <p>Pass the server's public HTTPS endpoint to the SDK. No API key goes in the app binary:</p>
 
       <div class="code-block">
         <div class="code-header"><span class="code-label">Swift app</span><span class="code-lang">Swift</span></div>
-        <pre><code class="language-swift">// Replace with the hostname or IP where your Collector is running
-// e.g. your EC2 instance, ECS service, or internal load balancer URL
-observability: OTelObservabilityEngine.datadog(
-    apiKey: "",     // ignored -- Collector holds the key
+        <pre><code class="language-swift">observability: OTelObservabilityEngine.datadog(
+    apiKey: "",     // ignored -- Collector on your server holds the key
     service: "my-app",
-    endpoint: URL(string: "https://collector.yourbackend.com:4318/v1/traces")
+    endpoint: URL(string: "https://collector.yourserver.com/v1/traces")
 )</code></pre>
-      </div>
-
-      <div class="callout callout-tip">
-        <span class="callout-icon">💡</span>
-        <div class="callout-body">
-          <p>If you are running the Collector locally for development (e.g. via Docker on your Mac), set the endpoint to <code>http://localhost:4318/v1/traces</code>. This lets you validate the full trace pipeline before deploying to a real backend.</p>
-        </div>
       </div>
 
       <div class="callout callout-note">
         <span class="callout-icon">ℹ️</span>
         <div class="callout-body">
-          <p>For ECS or Fargate deployments, run the DDOT Collector as a sidecar container alongside your backend service and expose port 4318 internally. Your app points at the internal service URL -- the Collector endpoint is never public-facing. See <a href="https://docs.datadoghq.com/opentelemetry/setup/ddot_collector/" target="_blank">Datadog's DDOT setup guide</a> for full deployment options including Kubernetes and Helm.</p>
+          <p>See <a href="https://docs.datadoghq.com/opentelemetry/setup/ddot_collector/" target="_blank">Datadog's DDOT setup guide</a> for deployment options including ECS, Kubernetes, and Helm. For ECS/Fargate, run the Collector as a separate service with an internal ALB -- your app hits the ALB URL, the Collector endpoint is never directly public.</p>
         </div>
       </div>
 
