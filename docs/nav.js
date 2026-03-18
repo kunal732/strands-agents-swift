@@ -14,6 +14,7 @@ const NAV = [
       { title: "Structured Output",  href: "structured-output.html" },
       { title: "Streaming",          href: "streaming.html" },
       { title: "Local Inference",    href: "local-inference.html" },
+      { title: "Hybrid Routing",     href: "local-inference.html#hybrid-routing", sub: true },
     ],
   },
   {

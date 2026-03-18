@@ -56,9 +56,25 @@ print(result.output)  // "7,006,652"</code></pre>
       </div>
 
       <h2 id="hybrid-routing">Hybrid Routing</h2>
-      <p>Route requests between local and cloud models based on a policy. Use local inference for fast, low-stakes tasks and cloud for complex ones:</p>
+      <p>A <code>HybridRouter</code> sits between your agent and its models. For each request it evaluates a policy and picks either the local (MLX) or cloud provider. The agent code is identical either way.</p>
+      <p>This is useful when you want fast, private responses for simple tasks and cloud-quality reasoning for complex ones, without writing any branching logic yourself.</p>
+
+      <div class="flow">
+        <div class="flow-row">
+          <span class="flow-node blue">Request</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-node">HybridRouter</span>
+          <span class="flow-arrow">→ policy says local →</span>
+          <span class="flow-node purple">MLXProvider</span>
+        </div>
+        <div class="flow-row" style="margin-top:0.3rem; padding-left: 12.4rem;">
+          <span class="flow-arrow">→ policy says cloud →</span>
+          <span class="flow-node green">BedrockProvider</span>
+        </div>
+      </div>
+
       <div class="code-block">
-        <div class="code-header"><span class="code-label">Latency-sensitive routing</span><span class="code-lang">Swift</span></div>
+        <div class="code-header"><span class="code-label">Basic setup</span><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">import StrandsAgents
 import StrandsMLXProvider
 import StrandsBedrockProvider
@@ -69,21 +85,131 @@ let agent = Agent(
         cloud: try BedrockProvider(config: BedrockConfig(
             modelId: "us.anthropic.claude-sonnet-4-20250514-v1:0"
         )),
-        policy: LatencySensitivePolicy()  // uses local when latency target is tight
+        policy: LatencySensitivePolicy()
     ),
     tools: [myTools]
 )</code></pre>
       </div>
 
-      <h3 id="routing-policies">Routing policies</h3>
+      <h3 id="built-in-policies">Built-in policies</h3>
+      <p>Choose the policy that matches your app's priorities:</p>
       <table>
-        <thead><tr><th>Policy</th><th>Behavior</th></tr></thead>
+        <thead><tr><th>Policy</th><th>Routes to local when...</th></tr></thead>
         <tbody>
-          <tr><td><code>LatencySensitivePolicy</code></td><td>Prefers local when sub-200ms response is needed</td></tr>
-          <tr><td><code>CostAwarePolicy</code></td><td>Always tries local first, falls back to cloud on failure</td></tr>
-          <tr><td><code>PrivacyPolicy</code></td><td>Routes to local for prompts matching sensitive patterns</td></tr>
+          <tr><td><code>AlwaysCloudPolicy</code></td><td>Never (default when no policy specified)</td></tr>
+          <tr><td><code>AlwaysLocalPolicy</code></td><td>Always</td></tr>
+          <tr><td><code>LatencySensitivePolicy</code></td><td>The request has <code>preferLowLatency</code> or <code>privacySensitive</code> hints set</td></tr>
+          <tr><td><code>FallbackPolicy</code></td><td>Device is not thermally throttled and <code>requiresDeepReasoning</code> is not set</td></tr>
         </tbody>
       </table>
+
+      <h3 id="routing-hints">Routing hints</h3>
+      <p>Your call site can influence the routing decision per-request by attaching hints to the agent's state before invoking it. The active policy reads these hints when deciding which provider to use.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Passing hints at the call site</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">// Force local for a privacy-sensitive prompt
+agent.routingHints = RoutingHints(privacySensitive: true)
+let privateResult = try await agent.run("Summarize my health records")
+
+// Request cloud-quality reasoning for a hard problem
+agent.routingHints = RoutingHints(requiresDeepReasoning: true)
+let deepResult = try await agent.run("Derive the proof for Fermat's last theorem")
+
+// Override the policy entirely for one call
+agent.routingHints = RoutingHints(forceProvider: .local)
+let localResult = try await agent.run("Quick offline calculation")
+
+// Reset to default (let the policy decide)
+agent.routingHints = RoutingHints()</code></pre>
+      </div>
+
+      <h4>Available hint flags</h4>
+      <table>
+        <thead><tr><th>Hint</th><th>Type</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td><code>preferLowLatency</code></td><td><code>Bool</code></td><td>Signal that response time matters more than capability</td></tr>
+          <tr><td><code>privacySensitive</code></td><td><code>Bool</code></td><td>Signal that the prompt should not leave the device</td></tr>
+          <tr><td><code>requiresDeepReasoning</code></td><td><code>Bool</code></td><td>Signal that this task needs a larger, more capable model</td></tr>
+          <tr><td><code>forceProvider</code></td><td><code>.local</code> / <code>.cloud</code></td><td>Bypass the policy and hard-route to a specific provider</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="device-capabilities">Device capabilities</h3>
+      <p>Policies also receive live device state, so your routing logic can respond to what the hardware is actually doing at runtime:</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Available in RoutingContext.deviceCapabilities</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">context.deviceCapabilities.hasNeuralEngine      // Bool  — Apple Silicon Neural Engine present
+context.deviceCapabilities.availableMemoryGB    // Double — RAM available right now
+context.deviceCapabilities.isPluggedIn          // Bool  — on power vs. battery
+context.deviceCapabilities.thermalState         // .nominal / .fair / .serious / .critical</code></pre>
+      </div>
+
+      <h3 id="custom-policy">Writing a custom policy</h3>
+      <p>Conform to <code>RoutingPolicy</code> and implement one method. Return <code>true</code> to use local inference, <code>false</code> to use cloud.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Example: route by prompt length + thermal state</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">struct SmartPolicy: RoutingPolicy {
+    let shortPromptThreshold = 200  // characters
+
+    func shouldUseLocal(context: RoutingContext) -> Bool {
+        // Never run locally if the device is throttling
+        guard context.deviceCapabilities.thermalState != .critical else { return false }
+
+        // Always respect an explicit privacy request
+        if context.hints.privacySensitive { return true }
+
+        // Route deep reasoning tasks to cloud
+        if context.hints.requiresDeepReasoning { return false }
+
+        // Short prompts with no tools: fast local response
+        let promptLength = context.messages.last?.textContent?.count ?? 0
+        let hasTools = !(context.toolSpecs?.isEmpty ?? true)
+        return promptLength < shortPromptThreshold && !hasTools
+    }
+}
+
+let agent = Agent(
+    router: HybridRouter(
+        local: MLXProvider(modelId: "mlx-community/Qwen3-8B-4bit"),
+        cloud: try BedrockProvider(config: BedrockConfig(
+            modelId: "us.anthropic.claude-sonnet-4-20250514-v1:0"
+        )),
+        policy: SmartPolicy()
+    )
+)</code></pre>
+      </div>
+
+      <div class="callout callout-tip">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body"><p>You can also implement the full <code>ModelRouter</code> protocol directly for cases where you need async logic, external signals (A/B flags, remote config), or routing to more than two providers.</p></div>
+      </div>
+
+      <h3 id="custom-router">Full custom router</h3>
+      <p>If the two-provider <code>HybridRouter</code> structure is too limiting, implement <code>ModelRouter</code> directly. You receive the full <code>RoutingContext</code> and can return any <code>ModelProvider</code>.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-label">Router with three providers</span><span class="code-lang">Swift</span></div>
+        <pre><code class="language-swift">struct TieredRouter: ModelRouter {
+    let nano: any ModelProvider    // fast local, small tasks
+    let standard: any ModelProvider // cloud, general tasks
+    let powerful: any ModelProvider // large cloud model, hard tasks
+
+    func route(context: RoutingContext) async throws -> any ModelProvider {
+        if context.hints.forceProvider == .local { return nano }
+        if context.hints.requiresDeepReasoning   { return powerful }
+
+        let wordCount = context.messages.reduce(0) { $0 + ($1.textContent?.split(separator: " ").count ?? 0) }
+        return wordCount < 50 ? nano : standard
+    }
+}
+
+let agent = Agent(
+    router: TieredRouter(
+        nano:      MLXProvider(modelId: "mlx-community/Qwen3-4B-4bit"),
+        standard:  try BedrockProvider(config: BedrockConfig(modelId: "us.anthropic.claude-haiku-3-5-20241022-v1:0")),
+        powerful:  try BedrockProvider(config: BedrockConfig(modelId: "us.anthropic.claude-sonnet-4-20250514-v1:0"))
+    )
+)</code></pre>
+      </div>
 
       <h2 id="tool-calling">Tool Calling with Local Models</h2>
       <p>Local inference supports tool calling via the MLX Swift LM tool call generation. Define tools the same way as with cloud providers:</p>
