@@ -64,9 +64,10 @@ public final class OTelObservabilityEngine: StrandsAgents.ObservabilityEngine, @
         service: String,
         version: String = "1.0",
         site: String = "datadoghq.com",
+        endpoint: URL? = nil,
         redactor: (any StrandsAgents.ContentRedactor)? = nil
     ) -> OTelObservabilityEngine {
-        let endpoint = URL(string: "https://otlp.\(site)/v1/traces")!
+        let endpoint = endpoint ?? URL(string: "https://otlp.\(site)/v1/traces")!
         let config = OtlpConfiguration(
             headers: [
                 ("dd-api-key", apiKey),

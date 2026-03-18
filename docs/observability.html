@@ -110,9 +110,10 @@ let result = try await agent.run("What is 42 * 17?")
         <div class="code-header"><span class="code-label">Full options</span><span class="code-lang">Swift</span></div>
         <pre><code class="language-swift">OTelObservabilityEngine.datadog(
     apiKey: "your-dd-api-key",
-    service: "my-app",        // shows as service name in Datadog
-    version: "2.1.0",         // optional, defaults to "1.0"
-    site: "datadoghq.eu"      // optional, defaults to "datadoghq.com"
+    service: "my-app",         // shows as service name in Datadog
+    version: "2.1.0",          // optional, defaults to "1.0"
+    site: "datadoghq.eu",      // optional, defaults to "datadoghq.com"
+    endpoint: URL(string: "https://your-proxy.example.com/v1/traces")  // optional, overrides site
 )</code></pre>
       </div>
 
