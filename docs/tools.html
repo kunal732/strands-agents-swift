@@ -64,6 +64,18 @@ func calculator(expression: String) -> String {
 let agent = Agent(model: provider, tools: [wordCount, calculator])</code></pre>
       </div>
 
+      <div class="callout callout-warn">
+        <span class="callout-icon">⚠️</span>
+        <div class="callout-body">
+          <p><strong>Xcode app targets with Swift 6 strict concurrency:</strong> Global functions in an app target are implicitly <code>@MainActor</code>-isolated. The <code>@Tool</code> wrapper calls your function from a non-main-actor context, which causes a compiler error. Fix it by marking the function <code>nonisolated</code>:</p>
+          <pre style="margin-top:0.75rem"><code class="language-swift">@Tool
+nonisolated func wordCount(text: String) -> Int {
+    text.split(whereSeparator: \.isWhitespace).count
+}</code></pre>
+          <p style="margin-top:0.5rem">This is not needed in Swift packages or when strict concurrency is off.</p>
+        </div>
+      </div>
+
       <h3 id="what-the-macro-generates">What the macro generates</h3>
       <p>For each annotated function, the macro creates two things:</p>
       <ul>

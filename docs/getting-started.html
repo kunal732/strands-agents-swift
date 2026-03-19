@@ -104,6 +104,11 @@ let result = try await agent.run("How many words are in 'Hello world'? Also, wha
 print(result.output)</code></pre>
       </div>
 
+      <div class="callout callout-note">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body"><p><strong>Xcode app targets:</strong> If your project uses Swift 6 strict concurrency, add <code>nonisolated</code> before each <code>@Tool</code> function and <code>import Combine</code> if using <code>@Published</code>. See the <a href="tools.html#tool-macro">Tools</a> page for details.</p></div>
+      </div>
+
       <div class="callout callout-tip">
         <span class="callout-icon">💡</span>
         <div class="callout-body"><p>The doc comment above the function becomes the tool description the model sees. Write clear, verb-led descriptions for best results.</p></div>
