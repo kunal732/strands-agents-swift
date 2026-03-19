@@ -119,11 +119,6 @@ public struct ToolMacro: PeerMacro {
             func call(toolUse: ToolUseBlock, context: ToolContext) async throws -> ToolResultBlock {
                 do {
                     let data = try JSONEncoder().encode(toolUse.input)
-                    enum CodingKeys: String, CodingKey {
-                        \(raw: codingKeys)
-                    }
-                    let container = try JSONDecoder().decode([String: JSONValue].self, from: data)
-                    // Decode each parameter
                     let decoded = try JSONDecoder().decode(DecodableInput.self, from: data)
                     let result = \(raw: tryKeyword)\(raw: awaitKeyword)\(raw: funcName)(\(raw: callArgs.replacingOccurrences(of: ": ", with: ": decoded.")))
                     return ToolResultBlock(toolUseId: toolUse.toolUseId, status: .success, content: [.text("\\(result)")])
