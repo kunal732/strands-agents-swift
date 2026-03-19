@@ -65,7 +65,7 @@ public struct ToolMacro: PeerMacro {
             """)
 
             if !isOptional {
-                required.append("\".string(\"\(paramName)\")\"")
+                required.append(".string(\"\(paramName)\")")
             }
 
             // Decoding line
