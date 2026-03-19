@@ -26,7 +26,7 @@
 ///
 /// Parameters with default values become optional in the schema.
 /// The doc comment becomes the tool description.
-@attached(peer, names: arbitrary)
+@attached(peer, names: prefixed(_GeneratedTool_), overloaded)
 public macro Tool() = #externalMacro(module: "StrandsAgentsMacros", type: "ToolMacro")
 
 /// Synthesizes `StructuredOutput` conformance for a struct.
