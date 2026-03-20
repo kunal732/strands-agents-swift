@@ -23,16 +23,16 @@ let prompt = "What is 99 * 77? Use the calculator tool."
 
 let providers: [(String, any ModelProvider)] = [
     ("Anthropic", AnthropicProvider(config: AnthropicConfig(
-        apiKey: ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] ?? "",
-        model: "claude-sonnet-4-5-20251001"
+        modelId: "claude-sonnet-4-5-20251001",
+        apiKey: ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"]
     ))),
     ("OpenAI", OpenAIProvider(config: OpenAIConfig(
-        apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"] ?? "",
-        model: "gpt-4o"
+        modelId: "gpt-4o",
+        apiKey: ProcessInfo.processInfo.environment["OPENAI_API_KEY"]
     ))),
     ("Gemini", GeminiProvider(config: GeminiConfig(
-        apiKey: ProcessInfo.processInfo.environment["GOOGLE_API_KEY"] ?? "",
-        model: "gemini-2.0-flash"
+        modelId: "gemini-2.0-flash",
+        apiKey: ProcessInfo.processInfo.environment["GOOGLE_API_KEY"]
     ))),
 ]
 

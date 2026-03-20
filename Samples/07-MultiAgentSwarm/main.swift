@@ -77,5 +77,5 @@ let prompts = [
 for prompt in prompts {
     print("User: \(prompt)")
     let result = try await swarm.run(prompt)
-    print("Agent: \(result.output)\n")
+    print("Agent: \(result.finalResult?.message.textContent ?? "")\n")
 }

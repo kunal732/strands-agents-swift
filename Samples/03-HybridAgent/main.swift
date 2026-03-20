@@ -8,7 +8,7 @@ import StrandsMLXProvider
 import StrandsBedrockProvider
 
 @Tool
-func getCurrentTime() -> String {
+func getCurrentTime(timezone: String = "local") -> String {
     let formatter = DateFormatter()
     formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
     return formatter.string(from: Date())

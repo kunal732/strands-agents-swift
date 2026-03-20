@@ -13,10 +13,13 @@ import Foundation
 import StrandsAgents
 import StrandsBedrockProvider
 
-print("Connecting to UltraMac MCP server at localhost:3000...")
+print("Connecting to UltraMac MCP server...")
 
-let mcpProvider = MCPToolProvider(serverURL: URL(string: "http://localhost:3000")!)
-let mcpTools = try await mcpProvider.tools()
+let mcpProvider = MCPToolProvider(
+    command: "npx",
+    arguments: ["-y", "ultramac-mcp"]
+)
+let mcpTools = try await mcpProvider.loadTools()
 
 print("Loaded \(mcpTools.count) desktop control tools from UltraMac MCP:")
 for tool in mcpTools {

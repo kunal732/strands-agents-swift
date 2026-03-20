@@ -121,7 +121,7 @@ let package = Package(
             path: "Sources/StrandsMLXBidiProvider"
         ),
 
-        // Examples
+        // Examples (legacy)
         .executableTarget(
             name: "LocalInferenceExample",
             dependencies: ["StrandsAgents", "StrandsMLXProvider"],
@@ -136,6 +136,68 @@ let package = Package(
             name: "MenuBarAgent",
             dependencies: ["StrandsAgents", "StrandsMLXProvider", "StrandsBedrockProvider", "StrandsBidiStreaming"],
             path: "Examples/MenuBarAgent"
+        ),
+
+        // Samples
+        .executableTarget(
+            name: "Sample01-SimpleLocalAgent",
+            dependencies: ["StrandsAgents", "StrandsMLXProvider"],
+            path: "Samples/01-SimpleLocalAgent"
+        ),
+        .executableTarget(
+            name: "Sample02-SimpleBedrockAgent",
+            dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
+            path: "Samples/02-SimpleBedrockAgent"
+        ),
+        .executableTarget(
+            name: "Sample03-HybridAgent",
+            dependencies: ["StrandsAgents", "StrandsMLXProvider", "StrandsBedrockProvider"],
+            path: "Samples/03-HybridAgent"
+        ),
+        .executableTarget(
+            name: "Sample04-NovaSonicBidi",
+            dependencies: ["StrandsAgents", "StrandsBidiStreaming"],
+            path: "Samples/04-NovaSonicBidi"
+        ),
+        .executableTarget(
+            name: "Sample05-MLXBidiLocal",
+            dependencies: ["StrandsAgents", "StrandsMLXBidiProvider"],
+            path: "Samples/05-MLXBidiLocal"
+        ),
+        .executableTarget(
+            name: "Sample06-MultiAgentGraph",
+            dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
+            path: "Samples/06-MultiAgentGraph"
+        ),
+        .executableTarget(
+            name: "Sample07-MultiAgentSwarm",
+            dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
+            path: "Samples/07-MultiAgentSwarm"
+        ),
+        .executableTarget(
+            name: "Sample08-MultiProvider",
+            dependencies: ["StrandsAgents", "StrandsAnthropicProvider", "StrandsOpenAIProvider", "StrandsGeminiProvider"],
+            path: "Samples/08-MultiProvider"
+        ),
+        .executableTarget(
+            name: "Sample09-StructuredOutput",
+            dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
+            path: "Samples/09-StructuredOutput"
+        ),
+        .executableTarget(
+            name: "Sample10-SessionPersistence",
+            dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
+            path: "Samples/10-SessionPersistence"
+        ),
+        .executableTarget(
+            name: "Sample11-DatadogObservability",
+            dependencies: ["StrandsAgents", "StrandsBedrockProvider", "StrandsOTelObservability"],
+            path: "Samples/11-DatadogObservability"
+        ),
+        .executableTarget(
+            name: "Sample12-MCPDesktopControl",
+            dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
+            path: "Samples/12-MCPDesktopControl"
         ),
 
         // Tests

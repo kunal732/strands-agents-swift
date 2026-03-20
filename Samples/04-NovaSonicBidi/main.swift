@@ -8,20 +8,20 @@ import StrandsAgents
 import StrandsBidiStreaming
 
 @Tool
-func getCurrentTime() -> String {
+func getCurrentTime(timezone: String = "local") -> String {
     let formatter = DateFormatter()
     formatter.dateFormat = "h:mm a"
     return formatter.string(from: Date())
 }
 
 let agent = BidiAgent(
-    model: NovaSonicModel(config: NovaSonicConfig(
+    model: try NovaSonicModel(
         region: "us-east-1",
         voice: "tiffany"
-    )),
+    ),
     tools: [getCurrentTime],
     config: BidiSessionConfig(
-        systemPrompt: "You are a friendly voice assistant. Keep responses short and conversational."
+        instructions: "You are a friendly voice assistant. Keep responses short and conversational."
     )
 )
 

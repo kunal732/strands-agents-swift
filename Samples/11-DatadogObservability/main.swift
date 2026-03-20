@@ -18,7 +18,7 @@ func calculator(expression: String) -> String {
 }
 
 @Tool
-func getCurrentTime() -> String {
+func getCurrentTime(timezone: String = "local") -> String {
     let formatter = DateFormatter()
     formatter.dateFormat = "yyyy-MM-dd HH:mm:ss zzz"
     return formatter.string(from: Date())

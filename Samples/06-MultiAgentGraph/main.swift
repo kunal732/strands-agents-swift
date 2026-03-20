@@ -53,11 +53,11 @@ print("Analyzing draft with 4 agents (3 parallel + 1 synthesis)...\n")
 let result = try await graph.run("Review this draft:\n\n\(draft)")
 
 print("=== Editor's Synthesis ===\n")
-print(result.output)
+print(result.finalResult?.message.textContent ?? "")
 
 // Show individual analyses
 print("\n=== Individual Analyses ===")
 for key in ["grammar", "tone", "clarity"] {
     print("\n[\(key)]")
-    print(result.nodeOutputs[key] ?? "(no output)")
+    print(result.nodeResults[key]?.message.textContent ?? "(no output)")
 }

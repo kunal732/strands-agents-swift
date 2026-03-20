@@ -1,5 +1,5 @@
 // 10 - Session Persistence
-// Conversation history survives app restarts using FileSessionRepository.
+// Conversation history survives app restarts using FileSessionStorage.
 // Run this sample twice to see the agent remember your name from the first run.
 
 import Foundation
@@ -9,16 +9,16 @@ import StrandsBedrockProvider
 let sessionsDir = FileManager.default.temporaryDirectory.appendingPathComponent("strands-sessions")
 try FileManager.default.createDirectory(at: sessionsDir, withIntermediateDirectories: true)
 
-let repo = FileSessionRepository(directory: sessionsDir)
-let manager = RepositorySessionManager(sessionId: "demo-session", repository: repo)
+let storage = FileSessionStorage(directory: sessionsDir)
+let manager = SessionManager(storage: storage, sessionId: "demo-session")
 
 let agent = Agent(
     model: try BedrockProvider(config: BedrockConfig(
         modelId: "us.anthropic.claude-sonnet-4-20250514-v1:0",
         region: "us-east-1"
     )),
-    sessionManager: manager,
-    systemPrompt: "You are a helpful assistant. Remember details the user tells you."
+    systemPrompt: "You are a helpful assistant. Remember details the user tells you.",
+    sessionManager: manager
 )
 
 // Try to restore a previous session
