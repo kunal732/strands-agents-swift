@@ -2,7 +2,7 @@
 
 [![Platform](https://img.shields.io/badge/platform-macOS%2014%2B%20%7C%20iOS%2017%2B%20%7C%20tvOS%2017%2B-lightgrey)](https://developer.apple.com)
 [![Swift](https://img.shields.io/badge/Swift-6.0%2B-orange)](https://swift.org)
-[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
 Community Swift implementation of the [AWS Strands Agents](https://github.com/strands-agents/sdk-python) framework.
 
@@ -10,7 +10,7 @@ Community Swift implementation of the [AWS Strands Agents](https://github.com/st
 
 [Strands Agents](https://github.com/strands-agents) is an open-source SDK created by AWS for building AI agents. An agent combines a model, tools, and a system prompt inside a loop. The loop receives user input, calls the model, executes any tools the model requests, and repeats until the model produces a final response.
 
-AWS provides official implementations in [Python](https://github.com/strands-agents/sdk-python) and [TypeScript](https://github.com/strands-agents/sdk-typescript). This Swift implementation is at feature parity with those SDKs, with additional support for on-device inference via MLX and native Apple audio I/O for voice agents.
+AWS provides official implementations in [Python](https://github.com/strands-agents/sdk-python) and [TypeScript](https://github.com/strands-agents/sdk-typescript). This is an unofficial Swift implementation with additional support for on-device inference via MLX and native Apple audio I/O for voice agents.
 
 ## Installation
 
