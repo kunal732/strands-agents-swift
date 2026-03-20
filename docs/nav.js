@@ -88,13 +88,15 @@ function buildHeader() {
 function buildSidebar() {
   const sidebar = document.getElementById("sidebar");
   if (!sidebar) return;
-  const current = window.location.pathname.split("/").pop() || "index.html";
+  const currentPage = window.location.pathname.split("/").pop() || "index.html";
+  const currentHash = window.location.hash;
   let html = "";
   for (const section of NAV) {
     html += `<div class="nav-section"><div class="nav-section-label">${section.label}</div>`;
     for (const item of section.items) {
-      const page = item.href.split("#")[0];
-      const active = page === current ? " active" : "";
+      const [page, hash] = item.href.split("#");
+      // Active only if page matches AND either the item has no hash or the hash matches
+      const active = page === currentPage && (!hash || `#${hash}` === currentHash) ? " active" : "";
       const sub = item.sub ? " sub" : "";
       html += `<a class="nav-item${sub}${active}" href="${item.href}">${item.title}</a>`;
     }
