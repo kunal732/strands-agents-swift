@@ -12,6 +12,10 @@ Standalone examples from simple to complex. Each is a single `main.swift` you ca
 | 06 | MultiAgentGraph | Bedrock | Parallel analysis agents + editor synthesis |
 | 07 | MultiAgentSwarm | Bedrock | Coordinator routes to calendar/notes/tasks agents |
 | 08 | MultiProvider | Anthropic + OpenAI + Gemini | Same tool across three providers |
+| 09 | StructuredOutput | Bedrock | `@StructuredOutput` macro, typed Swift struct from model |
+| 10 | SessionPersistence | Bedrock | Conversation survives app restarts via `FileSessionRepository` |
+| 11 | DatadogObservability | Bedrock | OTel traces to Datadog LLM Observability with `.datadog()` factory |
+| 12 | MCPDesktopControl | Bedrock + MCP | Control macOS desktop via [UltraMac MCP](https://github.com/jxoesneon/ultramac-mcp) server |
 
 ## Running
 
@@ -33,6 +37,16 @@ export ANTHROPIC_API_KEY=sk-ant-...
 export OPENAI_API_KEY=sk-...
 export GOOGLE_API_KEY=AIza...
 cd 08-MultiProvider
+swift run
+
+# Datadog observability (requires DD API key)
+export DD_API_KEY=your-dd-api-key
+cd 11-DatadogObservability
+swift run
+
+# MCP desktop control (requires UltraMac MCP server running)
+# git clone https://github.com/jxoesneon/ultramac-mcp && cd ultramac-mcp && npm install && npm start
+cd 12-MCPDesktopControl
 swift run
 ```
 
