@@ -137,6 +137,14 @@ let package = Package(
             dependencies: ["StrandsAgents", "StrandsMLXProvider", "StrandsBedrockProvider", "StrandsBidiStreaming"],
             path: "Examples/MenuBarAgent"
         ),
+        .executableTarget(
+            name: "DesktopAssistant",
+            dependencies: [
+                "StrandsAgents", "StrandsBedrockProvider",
+                "StrandsBidiStreaming", "StrandsMLXBidiProvider", "StrandsMLXProvider",
+            ],
+            path: "Examples/DesktopAssistant"
+        ),
 
         // Samples
         .executableTarget(
