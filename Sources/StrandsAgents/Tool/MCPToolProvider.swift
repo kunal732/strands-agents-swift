@@ -162,7 +162,7 @@ public final class MCPToolProvider: ToolProvider, @unchecked Sendable {
 
         stdinPipe.fileHandleForWriting.write(message)
 
-        // Read response
+        // Read response line-by-line until we get a JSON-RPC response matching our request ID
         guard let stdoutPipe = stdout else {
             throw StrandsError.providerError(
                 underlying: NSError(domain: "MCPToolProvider", code: -1,
@@ -170,13 +170,7 @@ public final class MCPToolProvider: ToolProvider, @unchecked Sendable {
             )
         }
 
-        let responseData = stdoutPipe.fileHandleForReading.availableData
-        guard !responseData.isEmpty,
-              let json = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any]
-        else {
-            // Try reading line by line
-            return [:]
-        }
+        let json = try await readResponse(from: stdoutPipe, expectedId: id)
 
         if let error = json["error"] as? [String: Any] {
             let message = error["message"] as? String ?? "Unknown MCP error"
@@ -187,6 +181,41 @@ public final class MCPToolProvider: ToolProvider, @unchecked Sendable {
         }
 
         return json["result"] as? [String: Any] ?? [:]
+    }
+
+    private func readResponse(from pipe: Pipe, expectedId: Int) async throws -> [String: Any] {
+        let handle = pipe.fileHandleForReading
+        var buffer = Data()
+
+        // Read byte-by-byte until we find a newline-delimited JSON response
+        // matching our request ID (skip notifications from the server)
+        while true {
+            let chunk = handle.availableData
+            if chunk.isEmpty {
+                // No data yet, yield and retry
+                try await Task.sleep(nanoseconds: 10_000_000) // 10ms
+                continue
+            }
+            buffer.append(chunk)
+
+            // Try to parse complete lines from the buffer
+            while let newlineRange = buffer.range(of: Data([0x0A])) {
+                let lineData = buffer.subdata(in: buffer.startIndex..<newlineRange.lowerBound)
+                buffer.removeSubrange(buffer.startIndex...newlineRange.lowerBound)
+
+                guard !lineData.isEmpty,
+                      let json = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any]
+                else { continue }
+
+                // Skip notifications (no "id" field)
+                guard let responseId = json["id"] as? Int else { continue }
+
+                // Match our request
+                if responseId == expectedId {
+                    return json
+                }
+            }
+        }
     }
 
     private func sendNotification(method: String, params: [String: Any]) throws {
