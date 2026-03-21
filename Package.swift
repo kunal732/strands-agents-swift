@@ -196,7 +196,7 @@ let package = Package(
         ),
         .executableTarget(
             name: "Sample12-MCPDesktopControl",
-            dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
+            dependencies: ["StrandsAgents", "StrandsBedrockProvider", "StrandsMLXProvider"],
             path: "Samples/12-MCPDesktopControl"
         ),
 

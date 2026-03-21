@@ -15,6 +15,7 @@
 import Foundation
 import StrandsAgents
 import StrandsBedrockProvider
+import StrandsMLXProvider
 
 // Launch the Automation MCP server as a stdio subprocess
 let bunPath = FileManager.default.homeDirectoryForCurrentUser
@@ -26,7 +27,11 @@ let mcpProvider = MCPToolProvider(
     command: bunPath,
     arguments: ["run", "/tmp/automation-mcp/index.ts", "--stdio"]
 )
-let mcpTools = try await mcpProvider.loadTools()
+// Filter out tools that have upstream issues:
+// - waitForImage: invalid JSON Schema that Bedrock rejects
+// - screenshot: base64 encoding bug in the MCP server
+let allTools = try await mcpProvider.loadTools()
+let mcpTools = allTools.filter { $0.name != "waitForImage" && $0.name != "screenshot" }
 
 print("Loaded \(mcpTools.count) desktop tools:")
 for tool in mcpTools {
@@ -34,11 +39,19 @@ for tool in mcpTools {
 }
 print()
 
-let agent = Agent(
-    model: try BedrockProvider(config: BedrockConfig(
+// Use local MLX model or cloud Bedrock (toggle by commenting one out)
+let useLocal = ProcessInfo.processInfo.environment["USE_LOCAL"] != nil
+let model: any ModelProvider = useLocal
+    ? MLXProvider(modelId: "mlx-community/Qwen3-8B-4bit")
+    : try BedrockProvider(config: BedrockConfig(
         modelId: "us.anthropic.claude-sonnet-4-20250514-v1:0",
         region: "us-east-1"
-    )),
+    ))
+
+print("Using \(useLocal ? "local MLX" : "cloud Bedrock") model\n")
+
+let agent = Agent(
+    model: model,
     tools: mcpTools,
     systemPrompt: """
     You are a macOS desktop assistant. You control the user's Mac using the available \
