@@ -29,6 +29,10 @@ final class AssistantManager {
     var isReady = false
     var voiceBackend: VoiceBackend = .novaSonic
 
+    /// Called by the manager to hide/show the popover during automation
+    var onHidePopover: (() -> Void)?
+    var onShowPopover: (() -> Void)?
+
     // MARK: - Private
 
     private var textAgent: Agent?
@@ -82,6 +86,9 @@ final class AssistantManager {
         let agent = textAgent!
         var assistantIdx: Int?
 
+        // Hide the popover so it doesn't steal focus from desktop automation
+        onHidePopover?()
+
         currentTask = Task {
             do {
                 for try await event in agent.stream(text) {
@@ -122,6 +129,8 @@ final class AssistantManager {
             isLoading = false
             currentTask = nil
             statusMessage = isReady ? "Ready (\(tools.count) tools)" : "Error"
+            // Show the popover again so the user can see results
+            onShowPopover?()
         }
     }
 
@@ -234,5 +243,6 @@ final class AssistantManager {
         isLoading = false
         isCancelling = false
         statusMessage = isReady ? "Ready (\(tools.count) tools)" : "Error"
+        onShowPopover?()
     }
 }

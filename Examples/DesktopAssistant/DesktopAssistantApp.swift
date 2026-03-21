@@ -31,7 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
             popover = NSPopover()
             popover.contentSize = NSSize(width: 480, height: 520)
-            popover.behavior = .transient
+            popover.behavior = .applicationDefined
             popover.delegate = self
             popover.contentViewController = NSHostingController(rootView: AssistantView(manager: manager))
 
@@ -47,6 +47,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
                     return nil
                 }
                 return event
+            }
+
+            manager.onHidePopover = { [weak self] in
+                self?.popover.performClose(nil)
+            }
+            manager.onShowPopover = { [weak self] in
+                self?.showPopover()
             }
 
             await manager.setup()
