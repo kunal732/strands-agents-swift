@@ -15,7 +15,7 @@ Standalone examples from simple to complex. Each is a single `main.swift` you ca
 | 09 | StructuredOutput | Bedrock | `@StructuredOutput` macro, typed Swift struct from model |
 | 10 | SessionPersistence | Bedrock | Conversation survives app restarts via `FileSessionRepository` |
 | 11 | DatadogObservability | Bedrock | OTel traces to Datadog LLM Observability with `.datadog()` factory |
-| 12 | MCPDesktopControl | Bedrock + MCP | Control macOS desktop via [UltraMac MCP](https://github.com/jxoesneon/ultramac-mcp) server |
+| 12 | MCPDesktopControl | Bedrock + MCP | Control macOS desktop via [Automation MCP](https://github.com/ashwwwin/automation-mcp) server |
 
 ## Running
 
@@ -44,8 +44,10 @@ export DD_API_KEY=your-dd-api-key
 cd 11-DatadogObservability
 swift run
 
-# MCP desktop control (requires UltraMac MCP server running)
-# git clone https://github.com/jxoesneon/ultramac-mcp && cd ultramac-mcp && npm install && npm start
+# MCP desktop control (requires Automation MCP server)
+# git clone https://github.com/ashwwwin/automation-mcp.git /tmp/automation-mcp
+# cd /tmp/automation-mcp && bun install
+# Grant Accessibility + Screen Recording permissions when prompted
 cd 12-MCPDesktopControl
 swift run
 ```
