@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import StrandsAgents
 import StrandsBedrockProvider
 import StrandsBidiStreaming
@@ -86,10 +87,12 @@ final class AssistantManager {
         let agent = textAgent!
         var assistantIdx: Int?
 
-        // Hide the popover so it doesn't steal focus from desktop automation
+        // Hide the popover and deactivate the app so macOS gives focus to the desktop
         onHidePopover?()
+        NSApp.hide(nil)
 
         currentTask = Task {
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second for focus to fully settle
             do {
                 for try await event in agent.stream(text) {
                     if Task.isCancelled { break }
