@@ -1,30 +1,42 @@
-// Personal Assistant -- Multi-Agent Swarm Demo
-//
-// A coordinator agent routes requests to on-device specialists
-// (calendar, notes, tasks). Shows which agent handled each request.
-// Demonstrates SwarmOrchestrator with dynamic handoffs.
+// Personal Assistant
+// Multi-agent swarm demo: a coordinator routes requests to specialist
+// agents (calendar, notes, tasks). Shows which agent handled each reply.
 
 import SwiftUI
 import StrandsAgents
 import StrandsBedrockProvider
 
-// MARK: - Message model
+// MARK: - Model
 
-struct Message: Identifiable {
+struct ChatMessage: Identifiable {
     let id = UUID()
-    let role: String        // "user", "assistant"
+    let role: String
     let content: String
-    let agent: String?      // which specialist handled it
+    let specialist: String?
+    let timestamp = Date()
 }
 
-// MARK: - Swarm model
+struct SpecialistInfo {
+    let id: String
+    let label: String
+    let icon: String
+    let color: Color
+    let description: String
+}
+
+let specialists: [SpecialistInfo] = [
+    SpecialistInfo(id: "coordinator",    label: "Coordinator",  icon: "arrow.triangle.branch", color: .gray,   description: "Routes requests"),
+    SpecialistInfo(id: "calendar-agent", label: "Calendar",     icon: "calendar",              color: .blue,   description: "Meetings & events"),
+    SpecialistInfo(id: "notes-agent",    label: "Notes",        icon: "note.text",             color: .orange, description: "Documents & search"),
+    SpecialistInfo(id: "tasks-agent",    label: "Tasks",        icon: "checkmark.circle",      color: .green,  description: "Reminders & to-dos"),
+]
 
 @Observable @MainActor
-final class PersonalAssistantModel {
-    var messages: [Message] = []
-    var isLoading = false
+final class AssistantModel {
+    var messages: [ChatMessage] = []
+    var activeSpecialist: String? = nil
+    var isThinking = false
 
-    // Simulated on-device data
     @Tool nonisolated static func checkCalendar(date: String) -> String {
         "Calendar for \(date): 10am Team standup, 2pm Design review, 4pm 1:1 with manager"
     }
@@ -32,7 +44,7 @@ final class PersonalAssistantModel {
         "Found 3 notes matching '\(query)': Meeting notes from Monday, Project plan draft, Weekly goals"
     }
     @Tool nonisolated static func createReminder(title: String, dueDate: String) -> String {
-        "Created reminder: '\(title)' due \(dueDate)"
+        "Reminder created: '\(title)' due \(dueDate)"
     }
 
     private let swarm: SwarmOrchestrator
@@ -43,208 +55,294 @@ final class PersonalAssistantModel {
             region: "us-east-1"
         ))
 
-        let coordinator = Agent(model: p, systemPrompt: """
-            You are a personal assistant coordinator. Route requests to the right specialist:
-            - "calendar-agent": schedule, events, meetings, availability
-            - "notes-agent": notes, documents, information
-            - "tasks-agent": reminders, tasks, to-do items
-            Hand off immediately. Do not answer yourself.
-            """)
-
-        let calendarAgent = Agent(model: p,
-            tools: [checkCalendar],
-            systemPrompt: "You manage the user's calendar. Use the checkCalendar tool and answer concisely.")
-
-        let notesAgent = Agent(model: p,
-            tools: [searchNotes],
-            systemPrompt: "You manage the user's notes. Use the searchNotes tool and answer concisely.")
-
-        let tasksAgent = Agent(model: p,
-            tools: [createReminder],
-            systemPrompt: "You manage reminders. Use the createReminder tool and confirm what was created.")
-
-        swarm = SwarmOrchestrator(
-            members: [
-                SwarmMember(id: "coordinator",    description: "Routes requests",           agent: coordinator),
-                SwarmMember(id: "calendar-agent", description: "Calendar and scheduling",   agent: calendarAgent),
-                SwarmMember(id: "notes-agent",    description: "Notes and documents",       agent: notesAgent),
-                SwarmMember(id: "tasks-agent",    description: "Reminders and tasks",       agent: tasksAgent),
-            ],
-            entryPoint: "coordinator"
-        )
+        swarm = SwarmOrchestrator(members: [
+            SwarmMember(id: "coordinator",
+                description: "Routes requests to the right specialist",
+                agent: Agent(model: p, systemPrompt: """
+                    You are a personal assistant coordinator. Hand off immediately:
+                    - "calendar-agent": schedule, events, meetings, availability, calendar
+                    - "notes-agent": notes, documents, search, find information
+                    - "tasks-agent": reminders, tasks, to-do, deadlines
+                    Do not answer yourself. Route only.
+                    """)),
+            SwarmMember(id: "calendar-agent",
+                description: "Calendar and scheduling",
+                agent: Agent(model: p, tools: [checkCalendar],
+                    systemPrompt: "You manage the user's calendar. Use checkCalendar and answer helpfully and concisely.")),
+            SwarmMember(id: "notes-agent",
+                description: "Notes and documents",
+                agent: Agent(model: p, tools: [searchNotes],
+                    systemPrompt: "You manage notes and documents. Use searchNotes and answer helpfully and concisely.")),
+            SwarmMember(id: "tasks-agent",
+                description: "Reminders and tasks",
+                agent: Agent(model: p, tools: [createReminder],
+                    systemPrompt: "You manage reminders and tasks. Use createReminder and confirm what was created.")),
+        ], entryPoint: "coordinator")
     }
 
     func send(_ text: String) async {
-        guard !text.isEmpty, !isLoading else { return }
-        messages.append(Message(role: "user", content: text, agent: nil))
-        isLoading = true
+        guard !text.isEmpty, !isThinking else { return }
+        messages.append(ChatMessage(role: "user", content: text, specialist: nil))
+        isThinking = true
+        activeSpecialist = "coordinator"
 
         do {
             let result = try await swarm.run(text)
             let specialist = result.executionOrder.last(where: { $0 != "coordinator" }) ?? "coordinator"
+            activeSpecialist = specialist
             let reply = result.finalResult?.message.textContent ?? ""
-            messages.append(Message(role: "assistant", content: reply, agent: specialist))
+            messages.append(ChatMessage(role: "assistant", content: reply, specialist: specialist))
         } catch {
-            messages.append(Message(role: "assistant", content: "Error: \(error.localizedDescription)", agent: nil))
+            messages.append(ChatMessage(role: "assistant", content: "Error: \(error.localizedDescription)", specialist: nil))
         }
 
-        isLoading = false
+        isThinking = false
+        activeSpecialist = nil
+    }
+
+    func clear() {
+        messages.removeAll()
+        activeSpecialist = nil
+        isThinking = false
     }
 }
 
-// MARK: - App Entry
+// MARK: - App
 
 @main
 struct PersonalAssistantApp: App {
     var body: some Scene {
         WindowGroup("Personal Assistant") {
-            AssistantView()
-                .frame(minWidth: 500, minHeight: 550)
+            RootView()
         }
+        .windowStyle(.titleBar)
+        .windowToolbarStyle(.unified)
+        .defaultSize(width: 900, height: 640)
     }
 }
 
-// MARK: - UI
+// MARK: - Root layout
 
-struct AssistantView: View {
-    @State private var model = PersonalAssistantModel()
+struct RootView: View {
+    @State private var model = AssistantModel()
     @State private var input = ""
     @FocusState private var focused: Bool
 
-    let suggestions = [
+    var body: some View {
+        NavigationSplitView(columnVisibility: .constant(.all)) {
+            sidebar
+                .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 250)
+        } detail: {
+            chatPane
+        }
+        .toolbar {
+            ToolbarItem {
+                Button { model.clear() } label: {
+                    Label("Clear Chat", systemImage: "trash")
+                }
+                .disabled(model.messages.isEmpty || model.isThinking)
+            }
+        }
+    }
+
+    // MARK: Sidebar
+
+    private var sidebar: some View {
+        List {
+            Section("Agents") {
+                ForEach(specialists, id: \.id) { s in
+                    SpecialistRow(info: s, isActive: model.activeSpecialist == s.id)
+                }
+            }
+
+            Section("Try asking") {
+                ForEach(suggestions, id: \.self) { s in
+                    Button {
+                        input = s
+                        Task { await sendInput() }
+                    } label: {
+                        Label(s, systemImage: "arrow.up.right.square")
+                            .font(.caption)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(model.isThinking)
+                }
+            }
+        }
+        .listStyle(.sidebar)
+        .navigationTitle("Personal Assistant")
+    }
+
+    private let suggestions = [
         "What's on my calendar today?",
         "Find my notes about the project plan",
         "Remind me to submit the report by Friday",
+        "What meetings do I have this week?",
     ]
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+    // MARK: Chat pane
 
-            // Header
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Personal Assistant")
-                    .font(.largeTitle.bold())
-                Text("A coordinator routes your request to the right specialist agent.")
-                    .foregroundStyle(.secondary)
+    private var chatPane: some View {
+        VStack(spacing: 0) {
+            // Routing indicator
+            if model.isThinking {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text(routingLabel)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color(nsColor: .controlBackgroundColor))
+                Divider()
             }
-            .padding(20)
-
-            Divider()
 
             // Messages
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 10) {
-                        if model.messages.isEmpty {
-                            VStack(spacing: 8) {
-                                Text("Try one of these:")
-                                    .foregroundStyle(.secondary)
-                                    .padding(.top, 20)
-                                ForEach(suggestions, id: \.self) { s in
-                                    Button(s) {
-                                        Task { await model.send(s) }
-                                    }
-                                    .buttonStyle(.plain)
-                                    .padding(.horizontal, 12).padding(.vertical, 8)
-                                    .background(Color(nsColor: .controlBackgroundColor))
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(.separator))
-                                }
+            if model.messages.isEmpty {
+                ContentUnavailableView(
+                    "Personal Assistant",
+                    systemImage: "bubble.left.and.bubble.right",
+                    description: Text("Ask about your calendar, notes, or tasks.\nThe coordinator will route your request to the right agent.")
+                )
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 12) {
+                            ForEach(model.messages) { msg in
+                                MessageBubble(msg: msg).id(msg.id)
                             }
-                            .frame(maxWidth: .infinity)
                         }
-
-                        ForEach(model.messages) { msg in
-                            MessageRow(msg: msg).id(msg.id)
-                        }
-
-                        if model.isLoading {
-                            HStack(spacing: 8) {
-                                ProgressView().controlSize(.small)
-                                Text("Routing to specialist...").foregroundStyle(.secondary).font(.caption)
-                            }
-                            .padding(.horizontal, 16)
-                        }
+                        .padding(16)
                     }
-                    .padding(16)
-                }
-                .onChange(of: model.messages.count) {
-                    if let last = model.messages.last {
-                        proxy.scrollTo(last.id, anchor: .bottom)
+                    .onChange(of: model.messages.count) {
+                        if let last = model.messages.last {
+                            withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+                        }
                     }
                 }
             }
 
             Divider()
 
-            // Input
+            // Input bar
             HStack(spacing: 10) {
-                TextField("Ask something...", text: $input)
-                    .textFieldStyle(.plain)
+                TextField("Ask about your calendar, notes, or tasks...", text: $input)
+                    .textFieldStyle(.roundedBorder)
                     .focused($focused)
-                    .onSubmit { send() }
-                    .disabled(model.isLoading)
-                Button("Send") { send() }
-                    .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty || model.isLoading)
-                    .buttonStyle(.borderedProminent)
+                    .onSubmit { Task { await sendInput() } }
+                    .disabled(model.isThinking)
+
+                Button {
+                    Task { await sendInput() }
+                } label: {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(input.trimmingCharacters(in: .whitespaces).isEmpty || model.isThinking ? Color.secondary : Color.blue)
+                }
+                .buttonStyle(.plain)
+                .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty || model.isThinking)
             }
-            .padding(16)
+            .padding(14)
         }
         .onAppear { focused = true }
     }
 
-    private func send() {
+    private var routingLabel: String {
+        switch model.activeSpecialist {
+        case "coordinator":    return "Routing your request..."
+        case "calendar-agent": return "Calendar agent is responding..."
+        case "notes-agent":    return "Notes agent is responding..."
+        case "tasks-agent":    return "Tasks agent is responding..."
+        default:               return "Thinking..."
+        }
+    }
+
+    private func sendInput() async {
         let t = input.trimmingCharacters(in: .whitespaces)
         guard !t.isEmpty else { return }
         input = ""
-        Task { await model.send(t) }
+        await model.send(t)
     }
 }
 
-struct MessageRow: View {
-    let msg: Message
+// MARK: - Sidebar specialist row
 
-    private var agentColor: Color {
-        switch msg.agent {
-        case "calendar-agent": return .blue
-        case "notes-agent":    return .orange
-        case "tasks-agent":    return .green
-        default:               return .secondary
+struct SpecialistRow: View {
+    let info: SpecialistInfo
+    let isActive: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(isActive ? info.color.opacity(0.2) : info.color.opacity(0.08))
+                    .frame(width: 32, height: 32)
+                if isActive {
+                    ProgressView().controlSize(.mini).tint(info.color)
+                } else {
+                    Image(systemName: info.icon)
+                        .font(.system(size: 13))
+                        .foregroundStyle(info.color)
+                }
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(info.label).font(.subheadline.weight(.medium))
+                Text(info.description).font(.caption).foregroundStyle(.secondary)
+            }
         }
+        .animation(.easeInOut(duration: 0.2), value: isActive)
     }
+}
 
-    private var agentLabel: String {
-        switch msg.agent {
-        case "calendar-agent": return "Calendar"
-        case "notes-agent":    return "Notes"
-        case "tasks-agent":    return "Tasks"
-        default:               return "Assistant"
-        }
+// MARK: - Message bubble
+
+struct MessageBubble: View {
+    let msg: ChatMessage
+
+    private var info: SpecialistInfo? {
+        specialists.first(where: { $0.id == msg.specialist })
     }
 
     var body: some View {
         if msg.role == "user" {
             HStack {
-                Spacer()
+                Spacer(minLength: 80)
                 Text(msg.content)
-                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    .padding(.horizontal, 14).padding(.vertical, 10)
                     .background(.blue)
                     .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .frame(maxWidth: 340, alignment: .trailing)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .frame(maxWidth: 420, alignment: .trailing)
             }
         } else {
-            VStack(alignment: .leading, spacing: 4) {
-                if let _ = msg.agent {
-                    Label(agentLabel, systemImage: "person.circle.fill")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(agentColor)
+            HStack(alignment: .top, spacing: 10) {
+                // Agent avatar
+                ZStack {
+                    Circle()
+                        .fill((info?.color ?? .gray).opacity(0.15))
+                        .frame(width: 34, height: 34)
+                    Image(systemName: info?.icon ?? "sparkles")
+                        .font(.system(size: 14))
+                        .foregroundStyle(info?.color ?? .gray)
                 }
-                Text(msg.content)
-                    .padding(.horizontal, 12).padding(.vertical, 8)
-                    .background(Color(nsColor: .controlBackgroundColor))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .frame(maxWidth: 380, alignment: .leading)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    if let info {
+                        Text(info.label)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(info.color)
+                    }
+                    Text(msg.content)
+                        .padding(.horizontal, 14).padding(.vertical, 10)
+                        .background(Color(nsColor: .controlBackgroundColor))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .frame(maxWidth: 460, alignment: .leading)
+                }
+                Spacer(minLength: 60)
             }
         }
     }

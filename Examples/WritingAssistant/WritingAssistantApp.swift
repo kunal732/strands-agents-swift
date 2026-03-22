@@ -1,196 +1,333 @@
-// Writing Assistant -- Multi-Agent Graph Demo
-//
-// Three specialized agents analyze a draft in parallel (grammar, tone, clarity),
-// then an editor agent synthesizes their feedback. Demonstrates GraphOrchestrator.
+// Writing Assistant
+// Multi-agent graph demo: grammar, tone, and clarity agents analyze a
+// draft in parallel, then an editor synthesizes their feedback.
 
 import SwiftUI
 import StrandsAgents
 import StrandsBedrockProvider
 
-// MARK: - Agent State
+// MARK: - Model
 
-enum AgentStatus { case waiting, running, done }
+enum AgentStatus: Equatable { case idle, running, done }
+
+struct AgentResult: Identifiable {
+    let id: String
+    let label: String
+    let icon: String
+    let color: Color
+    var status: AgentStatus = .idle
+    var output: String = ""
+}
 
 @Observable @MainActor
-final class WritingAssistantModel {
-    var draft = "The new feature is very good and it makes things work better. Users can now do stuff that they couldnt before which is great. We think this will be impactful for the business going forward and we look forward to seeing how it performs in the market."
-    var grammarStatus: AgentStatus = .waiting
-    var toneStatus:    AgentStatus = .waiting
-    var clarityStatus: AgentStatus = .waiting
-    var editorStatus:  AgentStatus = .waiting
+final class WritingModel {
+    var draft = """
+    The new feature is very good and it makes things work better. \
+    Users can now do stuff that they couldnt before which is great. \
+    We think this will be impactful for the business going forward \
+    and we look forward to seeing how it performs in the market.
+    """
+    var agents: [AgentResult] = [
+        AgentResult(id: "grammar", label: "Grammar",  icon: "textformat.abc",   color: .blue),
+        AgentResult(id: "tone",    label: "Tone",      icon: "waveform",         color: .purple),
+        AgentResult(id: "clarity", label: "Clarity",   icon: "eye",              color: .orange),
+        AgentResult(id: "editor",  label: "Editor",    icon: "pencil.and.scribble", color: .green),
+    ]
     var synthesis = ""
-    var isRunning = false
+    var isAnalyzing = false
     var errorMessage: String?
 
-    private let provider: BedrockProvider
-
-    init() {
-        provider = try! BedrockProvider(config: BedrockConfig(
-            modelId: "us.anthropic.claude-sonnet-4-20250514-v1:0",
-            region: "us-east-1"
-        ))
-    }
+    private let provider = try! BedrockProvider(config: BedrockConfig(
+        modelId: "us.anthropic.claude-sonnet-4-20250514-v1:0",
+        region: "us-east-1"
+    ))
 
     func analyze() async {
-        guard !isRunning else { return }
-        isRunning = true
+        guard !isAnalyzing else { return }
+        isAnalyzing = true
         errorMessage = nil
         synthesis = ""
-        grammarStatus = .waiting
-        toneStatus    = .waiting
-        clarityStatus = .waiting
-        editorStatus  = .waiting
+        for i in agents.indices { agents[i].status = .idle; agents[i].output = "" }
 
         let p = provider
         let text = draft
 
-        let grammarAgent = Agent(model: p, systemPrompt: "You are a grammar expert. List grammar and spelling errors concisely.")
-        let toneAgent    = Agent(model: p, systemPrompt: "You analyze writing tone. Identify tone issues and suggest improvements concisely.")
-        let clarityAgent = Agent(model: p, systemPrompt: "You evaluate clarity. Flag vague language and suggest specific replacements concisely.")
-        let editorAgent  = Agent(model: p, systemPrompt: "You are a senior editor. Synthesize the grammar, tone, and clarity feedback into the 3 most important improvements, numbered.")
-
         let graph = GraphOrchestrator(nodes: [
-            GraphNode(id: "grammar",  agent: grammarAgent),
-            GraphNode(id: "tone",     agent: toneAgent),
-            GraphNode(id: "clarity",  agent: clarityAgent),
-            GraphNode(id: "editor",   agent: editorAgent, dependencies: ["grammar", "tone", "clarity"]),
+            GraphNode(id: "grammar", agent: Agent(model: p, systemPrompt: "Grammar expert. List grammar and spelling errors with corrections. Be specific and concise.")),
+            GraphNode(id: "tone",    agent: Agent(model: p, systemPrompt: "Tone analyst. Identify tone issues (vague, informal, weak). Give specific rewrites. Be concise.")),
+            GraphNode(id: "clarity", agent: Agent(model: p, systemPrompt: "Clarity editor. Flag ambiguous phrases. Suggest precise replacements. Be concise.")),
+            GraphNode(id: "editor",  agent: Agent(model: p, systemPrompt: "Senior editor. Synthesize the grammar, tone, and clarity feedback into the 3 most important improvements, numbered and ordered by impact."),
+                      dependencies: ["grammar", "tone", "clarity"]),
         ])
 
-        // Animate statuses as nodes complete
-        Task {
-            try? await Task.sleep(nanoseconds: 200_000_000)
-            grammarStatus = .running
-            toneStatus    = .running
-            clarityStatus = .running
-        }
+        // Set stage-1 agents to running
+        setStatus("grammar", .running)
+        setStatus("tone",    .running)
+        setStatus("clarity", .running)
 
         do {
             let result = try await graph.run("Review this draft:\n\n\(text)")
 
-            grammarStatus = .done
-            toneStatus    = .done
-            clarityStatus = .done
-            editorStatus  = .running
+            for id in ["grammar", "tone", "clarity"] {
+                setStatus(id, .done)
+                if let r = result.nodeResults[id] {
+                    setOutput(id, r.message.textContent ?? "")
+                }
+            }
 
+            setStatus("editor", .running)
             try? await Task.sleep(nanoseconds: 300_000_000)
-            editorStatus = .done
+            setStatus("editor", .done)
             synthesis = result.finalResult?.message.textContent ?? ""
         } catch {
             errorMessage = error.localizedDescription
+            for i in agents.indices where agents[i].status == .running {
+                agents[i].status = .idle
+            }
         }
+        isAnalyzing = false
+    }
 
-        isRunning = false
+    func reset() {
+        synthesis = ""
+        errorMessage = nil
+        for i in agents.indices { agents[i].status = .idle; agents[i].output = "" }
+    }
+
+    private func setStatus(_ id: String, _ s: AgentStatus) {
+        if let i = agents.firstIndex(where: { $0.id == id }) { agents[i].status = s }
+    }
+    private func setOutput(_ id: String, _ o: String) {
+        if let i = agents.firstIndex(where: { $0.id == id }) { agents[i].output = o }
     }
 }
 
-// MARK: - App Entry
+// MARK: - App
 
 @main
 struct WritingAssistantApp: App {
     var body: some Scene {
         WindowGroup("Writing Assistant") {
-            ContentView()
-                .frame(minWidth: 700, minHeight: 600)
+            RootView()
         }
+        .windowStyle(.titleBar)
+        .windowToolbarStyle(.unified)
+        .defaultSize(width: 1000, height: 680)
     }
 }
 
-// MARK: - UI
+// MARK: - Root layout
 
-struct ContentView: View {
-    @State private var model = WritingAssistantModel()
+struct RootView: View {
+    @State private var model = WritingModel()
+    @State private var selectedAgent: String? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-
-            // Title
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Writing Assistant")
-                    .font(.largeTitle.bold())
-                Text("Three agents analyze your draft in parallel, then an editor synthesizes their feedback.")
-                    .foregroundStyle(.secondary)
+        NavigationSplitView(columnVisibility: .constant(.all)) {
+            sidebar
+                .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 260)
+        } detail: {
+            detailPane
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    Task { await model.analyze() }
+                } label: {
+                    Label("Analyze", systemImage: "play.fill")
+                }
+                .disabled(model.isAnalyzing || model.draft.trimmingCharacters(in: .whitespaces).isEmpty)
+                .buttonStyle(.borderedProminent)
             }
-
-            // Draft input
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Your draft").font(.headline)
-                TextEditor(text: $model.draft)
-                    .font(.body)
-                    .frame(height: 100)
-                    .padding(8)
-                    .background(Color(nsColor: .textBackgroundColor))
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.secondary.opacity(0.3)))
+            ToolbarItem {
+                Button {
+                    model.reset()
+                    selectedAgent = nil
+                } label: {
+                    Label("Clear", systemImage: "arrow.counterclockwise")
+                }
+                .disabled(model.isAnalyzing)
             }
+        }
+    }
 
-            // Agent pipeline
-            HStack(spacing: 12) {
-                AgentBadge(label: "Grammar",  status: model.grammarStatus, color: .blue)
-                AgentBadge(label: "Tone",     status: model.toneStatus,    color: .purple)
-                AgentBadge(label: "Clarity",  status: model.clarityStatus, color: .orange)
-                Image(systemName: "arrow.right").foregroundStyle(.secondary)
-                AgentBadge(label: "Editor",   status: model.editorStatus,  color: .green)
-            }
+    // MARK: Sidebar
 
-            // Analyze button
-            Button {
-                Task { await model.analyze() }
-            } label: {
-                HStack {
-                    if model.isRunning { ProgressView().controlSize(.small) }
-                    Text(model.isRunning ? "Analyzing..." : "Analyze Draft")
-                        .frame(maxWidth: .infinity)
+    private var sidebar: some View {
+        List(selection: $selectedAgent) {
+            Section("Agent Pipeline") {
+                ForEach(model.agents) { agent in
+                    AgentRow(agent: agent)
+                        .tag(agent.id)
                 }
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(model.isRunning || model.draft.trimmingCharacters(in: .whitespaces).isEmpty)
 
-            // Error
-            if let err = model.errorMessage {
-                Text("Error: \(err)").foregroundStyle(.red).font(.caption)
-            }
-
-            // Synthesis
-            if !model.synthesis.isEmpty {
+            Section("About") {
                 VStack(alignment: .leading, spacing: 6) {
+                    Text("Three agents analyze your draft in parallel. The editor synthesizes their findings.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.left.and.right")
+                            .font(.caption2)
+                        Text("Grammar + Tone + Clarity run simultaneously")
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
+                .listRowBackground(Color.clear)
+            }
+        }
+        .listStyle(.sidebar)
+        .navigationTitle("Writing Assistant")
+    }
+
+    // MARK: Detail pane
+
+    @ViewBuilder
+    private var detailPane: some View {
+        if let id = selectedAgent, let agent = model.agents.first(where: { $0.id == id }), !agent.output.isEmpty {
+            AgentDetailView(agent: agent)
+        } else {
+            mainEditor
+        }
+    }
+
+    private var mainEditor: some View {
+        VSplitView {
+            // Draft editor
+            VStack(alignment: .leading, spacing: 0) {
+                HStack {
+                    Label("Draft", systemImage: "doc.text")
+                        .font(.headline)
+                    Spacer()
+                    Text("\(model.draft.split(whereSeparator: \.isWhitespace).count) words")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 8)
+
+                Divider()
+
+                TextEditor(text: $model.draft)
+                    .font(.body)
+                    .padding(16)
+                    .disabled(model.isAnalyzing)
+            }
+            .frame(minHeight: 200)
+
+            // Results pane
+            VStack(alignment: .leading, spacing: 0) {
+                HStack {
                     Label("Editor's Synthesis", systemImage: "sparkles")
                         .font(.headline)
+                    Spacer()
+                    if model.isAnalyzing {
+                        HStack(spacing: 6) {
+                            ProgressView().controlSize(.small)
+                            Text("Analyzing...").font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+
+                Divider()
+
+                if let err = model.errorMessage {
+                    Text("Error: \(err)")
+                        .foregroundStyle(.red)
+                        .padding(20)
+                } else if model.synthesis.isEmpty && !model.isAnalyzing {
+                    ContentUnavailableView(
+                        "No Analysis Yet",
+                        systemImage: "sparkles",
+                        description: Text("Click Analyze to run the agent pipeline.")
+                    )
+                } else {
                     ScrollView {
                         Text(model.synthesis)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(12)
+                            .padding(20)
                     }
-                    .background(Color(nsColor: .controlBackgroundColor))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .frame(maxHeight: 200)
                 }
             }
-
-            Spacer()
+            .frame(minHeight: 180)
+            .background(Color(nsColor: .controlBackgroundColor))
         }
-        .padding(20)
     }
 }
 
-struct AgentBadge: View {
-    let label: String
-    let status: AgentStatus
-    let color: Color
+// MARK: - Sidebar row
+
+struct AgentRow: View {
+    let agent: AgentResult
 
     var body: some View {
-        HStack(spacing: 6) {
-            Group {
-                switch status {
-                case .waiting: Image(systemName: "circle").foregroundStyle(.secondary)
-                case .running: ProgressView().controlSize(.mini)
-                case .done:    Image(systemName: "checkmark.circle.fill").foregroundStyle(color)
+        HStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(agent.color.opacity(0.15))
+                    .frame(width: 32, height: 32)
+                switch agent.status {
+                case .idle:    Image(systemName: agent.icon).font(.system(size: 13)).foregroundStyle(agent.color.opacity(0.5))
+                case .running: ProgressView().controlSize(.small).tint(agent.color)
+                case .done:    Image(systemName: "checkmark").font(.system(size: 13, weight: .bold)).foregroundStyle(agent.color)
                 }
             }
-            Text(label).font(.subheadline.weight(.medium))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(agent.label).font(.subheadline.weight(.medium))
+                Text(statusLabel).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            if agent.status == .done && !agent.output.isEmpty {
+                Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.secondary)
+            }
         }
-        .padding(.horizontal, 10).padding(.vertical, 6)
-        .background(status == .done ? color.opacity(0.1) : Color(nsColor: .controlBackgroundColor))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(status == .done ? color.opacity(0.4) : Color.secondary.opacity(0.3)))
-        .animation(.easeInOut(duration: 0.3), value: status == .done)
+        .padding(.vertical, 2)
+        .animation(.easeInOut(duration: 0.3), value: agent.status)
+    }
+
+    private var statusLabel: String {
+        switch agent.status {
+        case .idle:    return agent.id == "editor" ? "Waits for others" : "Waiting"
+        case .running: return "Analyzing..."
+        case .done:    return agent.output.isEmpty ? "Done" : "Tap to view"
+        }
+    }
+}
+
+// MARK: - Agent detail
+
+struct AgentDetailView: View {
+    let agent: AgentResult
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle().fill(agent.color.opacity(0.15)).frame(width: 40, height: 40)
+                    Image(systemName: agent.icon).font(.system(size: 16)).foregroundStyle(agent.color)
+                }
+                VStack(alignment: .leading) {
+                    Text(agent.label).font(.title2.bold())
+                    Text("Analysis complete").font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(20)
+            Divider()
+            ScrollView {
+                Text(agent.output)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(20)
+            }
+        }
+        .background(Color(nsColor: .windowBackgroundColor))
     }
 }
