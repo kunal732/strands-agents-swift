@@ -151,16 +151,34 @@ struct AssistantView: View {
 
     private var inputBar: some View {
         HStack(spacing: 8) {
-            // Mic button
+            // Mic button with Siri-like animation
             Button {
                 Task { await manager.toggleVoice() }
             } label: {
-                Image(systemName: manager.isVoiceActive ? "mic.fill" : "mic")
-                    .foregroundStyle(manager.isVoiceActive ? .red : .primary)
+                ZStack {
+                    // Pulsing ring when voice is active
+                    if manager.isVoiceActive {
+                        Circle()
+                            .stroke(Color.red.opacity(0.4), lineWidth: 3)
+                            .frame(width: 32, height: 32)
+                            .scaleEffect(manager.isVoiceActive ? 1.4 : 1.0)
+                            .opacity(manager.isVoiceActive ? 0 : 1)
+                            .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: false), value: manager.isVoiceActive)
+
+                        Circle()
+                            .fill(Color.red.opacity(0.15))
+                            .frame(width: 30, height: 30)
+                    }
+
+                    Image(systemName: manager.isVoiceActive ? "mic.fill" : "mic")
+                        .font(.system(size: 16))
+                        .foregroundStyle(manager.isVoiceActive ? .red : .primary)
+                }
+                .frame(width: 32, height: 32)
             }
             .buttonStyle(.plain)
             .disabled(!manager.isReady || manager.isLoading)
-            .help("Voice mode (Nova Sonic)")
+            .help("Voice mode")
 
             // Text field
             TextField("Type a command...", text: $inputText)

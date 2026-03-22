@@ -148,6 +148,10 @@ final class AssistantManager {
             return
         }
 
+        // Show immediate feedback
+        statusMessage = "Connecting voice..."
+        messages.append(AssistantMessage(role: "system", content: "Starting voice mode (\(voiceBackend.rawValue))..."))
+
         do {
             // Create the bidi model based on selected backend
             let bidi: BidiAgent
@@ -155,6 +159,7 @@ final class AssistantManager {
 
             switch voiceBackend {
             case .novaSonic:
+                print("[Voice] Creating NovaSonicModel...")
                 let model = try NovaSonicModel(region: "us-east-1", voice: "tiffany")
                 audioFormat = .novaSonic
                 bidi = BidiAgent(
@@ -192,9 +197,12 @@ final class AssistantManager {
             speaker = spk
 
             // Start the bidi session
+            print("[Voice] Starting bidi session...")
             try await bidi.start()
+            print("[Voice] Session started. Starting audio I/O...")
             try mic.start()
             try spk.start()
+            print("[Voice] Audio I/O started.")
 
             isVoiceActive = true
             statusMessage = "Listening..."
@@ -227,7 +235,9 @@ final class AssistantManager {
                 await stopVoice()
             }
         } catch {
+            print("[Voice] Error: \(error)")
             messages.append(AssistantMessage(role: "system", content: "Voice failed: \(error.localizedDescription)"))
+            statusMessage = isReady ? "Ready (\(tools.count) tools)" : "Error"
             onShowPopover?()
         }
     }
