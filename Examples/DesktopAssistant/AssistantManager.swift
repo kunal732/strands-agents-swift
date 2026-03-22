@@ -163,21 +163,32 @@ final class AssistantManager {
             switch voiceBackend {
             case .localMLX:
                 print("[Voice] Loading local MLX models (STT + LLM + TTS)...")
-                statusMessage = "Loading models..."
+                statusMessage = "Loading STT model..."
 
-                let sttModel = try await GLMASRModel.fromPretrained("mlx-community/GLM-ASR-Nano-2512-4bit")
-                print("[Voice] STT model loaded")
-                let ttsModel = try await SopranoModel.fromPretrained("mlx-community/Soprano-80M-bf16")
-                print("[Voice] TTS model loaded")
+                // Load models off main actor to keep UI responsive
+                let capturedTools = tools
+                let (loadedBidi, loadedFormat) = try await Task.detached {
+                    let sttModel = try await GLMASRModel.fromPretrained("mlx-community/GLM-ASR-Nano-2512-4bit")
+                    print("[Voice] STT model loaded")
 
-                audioFormat = .mlxDefault
-                bidi = MLXBidiFactory.createAgent(
-                    llmProcessor: MLXLLMProcessor(modelId: "mlx-community/Qwen3-8B-4bit", maxTokens: 1024),
-                    sttProcessor: MLXSTTProcessor(model: sttModel),
-                    ttsProcessor: MLXTTSProcessor(model: ttsModel),
-                    tools: tools,
-                    systemPrompt: desktopSystemPrompt
-                )
+                    let ttsModel = try await SopranoModel.fromPretrained("mlx-community/Soprano-80M-bf16")
+                    print("[Voice] TTS model loaded")
+
+                    print("[Voice] Creating LLM processor + BidiAgent...")
+                    let agent = MLXBidiFactory.createAgent(
+                        llmProcessor: MLXLLMProcessor(modelId: "mlx-community/Qwen3-8B-4bit", maxTokens: 1024),
+                        sttProcessor: MLXSTTProcessor(model: sttModel),
+                        ttsProcessor: MLXTTSProcessor(model: ttsModel),
+                        tools: capturedTools,
+                        systemPrompt: desktopSystemPrompt
+                    )
+                    print("[Voice] BidiAgent created")
+                    return (agent, AudioFormat.mlxDefault)
+                }.value
+
+                audioFormat = loadedFormat
+                bidi = loadedBidi
+                statusMessage = "Models loaded. Starting session..."
 
             case .novaSonic:
                 print("[Voice] Creating NovaSonicModel...")
