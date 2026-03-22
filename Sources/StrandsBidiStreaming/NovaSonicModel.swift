@@ -43,7 +43,9 @@ public final class NovaSonicModel: BidiModel, @unchecked Sendable {
         self.region = region
         self.voice = voice
         self.connectionTimeout = connectionTimeout
-        self.client = BedrockRuntimeClient(config: try .init(region: region))
+        var clientConfig = try BedrockRuntimeClient.BedrockRuntimeClientConfiguration(region: region)
+        clientConfig.httpClientConfiguration.socketTimeout = connectionTimeout
+        self.client = BedrockRuntimeClient(config: clientConfig)
     }
 
     // MARK: - BidiModel
