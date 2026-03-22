@@ -41,6 +41,9 @@ final class AssistantManager {
     private var mcpProvider: MCPToolProvider?
     private var tools: [any AgentTool] = []
     private var currentTask: Task<Void, Never>?
+    private var micTask: Task<Void, Never>?
+    private var microphone: MicrophoneInput?
+    private var speaker: SpeakerOutput?
 
     // MARK: - Setup
 
@@ -146,34 +149,70 @@ final class AssistantManager {
         }
 
         do {
+            // Create the bidi model based on selected backend
             let bidi: BidiAgent
+            let audioFormat: AudioFormat
+
             switch voiceBackend {
             case .novaSonic:
                 let model = try NovaSonicModel(region: "us-east-1", voice: "tiffany")
+                audioFormat = .novaSonic
                 bidi = BidiAgent(
                     model: model,
                     tools: tools,
-                    config: BidiSessionConfig(instructions: desktopSystemPrompt)
+                    config: BidiSessionConfig(
+                        instructions: desktopSystemPrompt,
+                        voice: "tiffany",
+                        inputAudioFormat: audioFormat,
+                        outputAudioFormat: audioFormat
+                    )
                 )
             case .localMLX:
-                // Local MLX bidi requires models to be loaded separately
-                // For now, fall back to Nova Sonic with a note
-                messages.append(AssistantMessage(role: "system", content: "Local MLX voice requires Xcode. Using Nova Sonic."))
+                messages.append(AssistantMessage(role: "system", content: "Local MLX voice not yet wired. Using Nova Sonic."))
                 let model = try NovaSonicModel(region: "us-east-1", voice: "tiffany")
+                audioFormat = .novaSonic
                 bidi = BidiAgent(
                     model: model,
                     tools: tools,
-                    config: BidiSessionConfig(instructions: desktopSystemPrompt)
+                    config: BidiSessionConfig(
+                        instructions: desktopSystemPrompt,
+                        voice: "tiffany",
+                        inputAudioFormat: audioFormat,
+                        outputAudioFormat: audioFormat
+                    )
                 )
             }
 
             bidiAgent = bidi
+
+            // Set up microphone and speaker
+            let mic = MicrophoneInput(format: audioFormat)
+            let spk = SpeakerOutput(format: audioFormat)
+            microphone = mic
+            speaker = spk
+
+            // Start the bidi session
             try await bidi.start()
+            try mic.start()
+            try spk.start()
+
             isVoiceActive = true
             statusMessage = "Listening..."
-            messages.append(AssistantMessage(role: "system", content: "Voice mode active. Speak your command."))
+            messages.append(AssistantMessage(role: "system", content: "Voice active. Speak your command. Click mic or press Escape to stop."))
 
-            // Start receiving events
+            // Hide popover so voice automation can control the desktop
+            onHidePopover?()
+            NSApp.hide(nil)
+
+            // Task 1: send mic audio to the model
+            micTask = Task {
+                for await chunk in mic.audioStream {
+                    if Task.isCancelled { break }
+                    try? await bidi.send(.audio(chunk, format: audioFormat))
+                }
+            }
+
+            // Task 2: receive events from the model
             currentTask = Task {
                 do {
                     for try await event in bidi.receive() {
@@ -189,43 +228,76 @@ final class AssistantManager {
             }
         } catch {
             messages.append(AssistantMessage(role: "system", content: "Voice failed: \(error.localizedDescription)"))
+            onShowPopover?()
         }
     }
 
     private func handleBidiEvent(_ event: BidiOutputEvent) async {
         switch event {
+        case .audio(let data, _):
+            speaker?.play(data)
+
         case .transcript(let role, let text, let isFinal):
             if isFinal {
                 messages.append(AssistantMessage(role: role == .user ? "user" : "assistant", content: text))
             }
+
+        case .inputSpeechStarted:
+            statusMessage = "Hearing you..."
+            speaker?.interrupt()
+
+        case .inputSpeechDone(let transcript):
+            if !transcript.isEmpty {
+                messages.append(AssistantMessage(role: "user", content: transcript))
+            }
+            statusMessage = "Thinking..."
+
+        case .responseStarted:
+            statusMessage = "Speaking..."
+
+        case .responseDone:
+            statusMessage = "Listening..."
+
         case .toolCall(let toolUse):
             messages.append(AssistantMessage(role: "tool", content: "Calling \(toolUse.name)..."))
             statusMessage = "Executing \(toolUse.name)..."
+
         case .toolResult(let result):
             let text = result.content.compactMap {
                 if case .text(let t) = $0 { return t } else { return nil }
             }.joined()
             messages.append(AssistantMessage(role: "tool", content: String(text.prefix(150))))
+
         case .textDelta(let text):
             if let last = messages.last, last.role == "assistant", last.isStreaming {
                 messages[messages.count - 1].content += text
             } else {
                 messages.append(AssistantMessage(role: "assistant", content: text, isStreaming: true))
             }
+
         case .sessionEnded:
             messages.append(AssistantMessage(role: "system", content: "Voice session ended."))
+
         case .error(let msg):
             messages.append(AssistantMessage(role: "system", content: "Voice error: \(msg)"))
+
         default:
             break
         }
     }
 
     private func stopVoice() async {
+        micTask?.cancel()
+        micTask = nil
+        microphone?.stop()
+        microphone = nil
+        speaker?.stop()
+        speaker = nil
         await bidiAgent?.stop()
         bidiAgent = nil
         isVoiceActive = false
         statusMessage = isReady ? "Ready (\(tools.count) tools)" : "Error"
+        onShowPopover?()
     }
 
     // MARK: - Cancellation
