@@ -247,14 +247,38 @@ final class AssistantManager {
             try await bidi.start()
             log("[Voice] Bidi session started")
 
-            // For now, skip audio I/O (AVAudioEngine crashes in menu bar apps
-            // without a proper app bundle). Use text input to the bidi agent instead.
-            // The local bidi model accepts .text() input directly.
-            log("[Voice] Skipping audio I/O (menu bar app limitation). Using text input mode.")
+            // Temporarily activate the app as .regular so AVAudioEngine
+            // can access the audio hardware (accessory policy blocks it)
+            log("[Voice] Starting audio I/O...")
+            NSApp.setActivationPolicy(.regular)
+            do {
+                try spk.start()
+                log("[Voice] Speaker started")
+                try mic.start()
+                log("[Voice] Microphone started")
+            } catch {
+                log("[Voice] Audio failed: \(error). Falling back to text input.")
+            }
+            NSApp.setActivationPolicy(.accessory)
 
             isVoiceActive = true
-            statusMessage = "Local LLM ready"
-            messages.append(AssistantMessage(role: "system", content: "Local voice mode active (Qwen3 + MCP tools). Type a command or press Escape to stop."))
+            let audioWorking = microphone != nil && speaker != nil
+            statusMessage = audioWorking ? "Listening..." : "Local LLM ready (text)"
+            messages.append(AssistantMessage(role: "system",
+                content: audioWorking
+                    ? "Voice active. Speak your command."
+                    : "Local LLM active (Qwen3 + MCP tools). Type or speak — text input works."))
+
+
+            // If audio started, stream mic chunks to the bidi agent
+            if let mic = microphone {
+                micTask = Task {
+                    for await chunk in mic.audioStream {
+                        if Task.isCancelled { break }
+                        try? await bidi.send(.audio(chunk, format: audioFormat))
+                    }
+                }
+            }
 
             // Receive events from the local bidi model
             currentTask = Task {
