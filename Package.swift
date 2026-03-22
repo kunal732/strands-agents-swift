@@ -140,12 +140,14 @@ let package = Package(
         .executableTarget(
             name: "WritingAssistant",
             dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
-            path: "Examples/WritingAssistant"
+            path: "Examples/WritingAssistant",
+            exclude: ["Info.plist"]
         ),
         .executableTarget(
             name: "PersonalAssistant",
             dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
-            path: "Examples/PersonalAssistant"
+            path: "Examples/PersonalAssistant",
+            exclude: ["Info.plist"]
         ),
         .executableTarget(
             name: "DesktopAssistant",
