@@ -185,7 +185,7 @@ struct AssistantView: View {
                 .textFieldStyle(.plain)
                 .focused($inputFocused)
                 .onSubmit { send() }
-                .disabled(!manager.isReady || manager.isLoading || manager.isVoiceActive)
+                .disabled(!manager.isReady || manager.isLoading)
 
             // Send button
             Button {

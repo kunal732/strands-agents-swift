@@ -20,6 +20,18 @@ struct AssistantMessage: Identifiable {
     var isStreaming = false
 }
 
+private func log(_ msg: String) {
+    let line = "[\(ISO8601DateFormatter().string(from: Date()))] \(msg)\n"
+    let path = "/tmp/desktop_assistant_debug.log"
+    if let handle = FileHandle(forWritingAtPath: path) {
+        handle.seekToEndOfFile()
+        handle.write(line.data(using: .utf8)!)
+        handle.closeFile()
+    } else {
+        FileManager.default.createFile(atPath: path, contents: line.data(using: .utf8))
+    }
+}
+
 @Observable
 @MainActor
 final class AssistantManager {
@@ -85,6 +97,20 @@ final class AssistantManager {
 
     func sendMessage(_ text: String) {
         guard !text.isEmpty, isReady, !isLoading else { return }
+
+        // If local voice mode is active, send text to the bidi agent instead
+        if isVoiceActive, let bidi = bidiAgent {
+            messages.append(AssistantMessage(role: "user", content: text))
+            isLoading = true
+            statusMessage = "Thinking (local)..."
+            onHidePopover?()
+            NSApp.hide(nil)
+            Task {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                try? await bidi.send(.text(text))
+            }
+            return
+        }
 
         messages.append(AssistantMessage(role: "user", content: text))
         isLoading = true
@@ -152,6 +178,7 @@ final class AssistantManager {
         }
 
         // Show immediate feedback
+        log("[Voice] toggleVoice called. Backend: \(voiceBackend.rawValue). isVoiceActive: \(isVoiceActive)")
         statusMessage = "Connecting voice..."
         messages.append(AssistantMessage(role: "system", content: "Starting voice mode (\(voiceBackend.rawValue))..."))
 
@@ -162,19 +189,19 @@ final class AssistantManager {
 
             switch voiceBackend {
             case .localMLX:
-                print("[Voice] Loading local MLX models (STT + LLM + TTS)...")
+                log("[Voice] Loading local MLX models (STT + LLM + TTS)...")
                 statusMessage = "Loading STT model..."
 
                 // Load models off main actor to keep UI responsive
                 let capturedTools = tools
                 let (loadedBidi, loadedFormat) = try await Task.detached {
                     let sttModel = try await GLMASRModel.fromPretrained("mlx-community/GLM-ASR-Nano-2512-4bit")
-                    print("[Voice] STT model loaded")
+                    log("[Voice] STT model loaded")
 
                     let ttsModel = try await SopranoModel.fromPretrained("mlx-community/Soprano-80M-bf16")
-                    print("[Voice] TTS model loaded")
+                    log("[Voice] TTS model loaded")
 
-                    print("[Voice] Creating LLM processor + BidiAgent...")
+                    log("[Voice] Creating LLM processor + BidiAgent...")
                     let agent = MLXBidiFactory.createAgent(
                         llmProcessor: MLXLLMProcessor(modelId: "mlx-community/Qwen3-8B-4bit", maxTokens: 1024),
                         sttProcessor: MLXSTTProcessor(model: sttModel),
@@ -182,7 +209,7 @@ final class AssistantManager {
                         tools: capturedTools,
                         systemPrompt: desktopSystemPrompt
                     )
-                    print("[Voice] BidiAgent created")
+                    log("[Voice] BidiAgent created")
                     return (agent, AudioFormat.mlxDefault)
                 }.value
 
@@ -191,7 +218,7 @@ final class AssistantManager {
                 statusMessage = "Models loaded. Starting session..."
 
             case .novaSonic:
-                print("[Voice] Creating NovaSonicModel...")
+                log("[Voice] Creating NovaSonicModel...")
                 messages.append(AssistantMessage(role: "system", content: "Note: Nova Sonic bidi streaming requires HTTP/2 support not yet available in the AWS SDK for Swift. This may time out."))
                 let model = try NovaSonicModel(region: "us-east-1", voice: "tiffany")
                 audioFormat = .novaSonic
@@ -216,30 +243,20 @@ final class AssistantManager {
             speaker = spk
 
             // Start the bidi session
-            print("[Voice] Starting bidi session...")
+            log("[Voice] Starting bidi session...")
             try await bidi.start()
-            print("[Voice] Session started. Starting audio I/O...")
-            try mic.start()
-            try spk.start()
-            print("[Voice] Audio I/O started.")
+            log("[Voice] Bidi session started")
+
+            // For now, skip audio I/O (AVAudioEngine crashes in menu bar apps
+            // without a proper app bundle). Use text input to the bidi agent instead.
+            // The local bidi model accepts .text() input directly.
+            log("[Voice] Skipping audio I/O (menu bar app limitation). Using text input mode.")
 
             isVoiceActive = true
-            statusMessage = "Listening..."
-            messages.append(AssistantMessage(role: "system", content: "Voice active. Speak your command. Click mic or press Escape to stop."))
+            statusMessage = "Local LLM ready"
+            messages.append(AssistantMessage(role: "system", content: "Local voice mode active (Qwen3 + MCP tools). Type a command or press Escape to stop."))
 
-            // Hide popover so voice automation can control the desktop
-            onHidePopover?()
-            NSApp.hide(nil)
-
-            // Task 1: send mic audio to the model
-            micTask = Task {
-                for await chunk in mic.audioStream {
-                    if Task.isCancelled { break }
-                    try? await bidi.send(.audio(chunk, format: audioFormat))
-                }
-            }
-
-            // Task 2: receive events from the model
+            // Receive events from the local bidi model
             currentTask = Task {
                 do {
                     for try await event in bidi.receive() {
@@ -254,7 +271,7 @@ final class AssistantManager {
                 await stopVoice()
             }
         } catch {
-            print("[Voice] Error: \(error)")
+            log("[Voice] Error: \(error)")
             messages.append(AssistantMessage(role: "system", content: "Voice failed: \(error.localizedDescription)"))
             statusMessage = isReady ? "Ready (\(tools.count) tools)" : "Error"
             onShowPopover?()
@@ -285,7 +302,9 @@ final class AssistantManager {
             statusMessage = "Speaking..."
 
         case .responseDone:
-            statusMessage = "Listening..."
+            isLoading = false
+            statusMessage = "Local LLM ready"
+            onShowPopover?()
 
         case .toolCall(let toolUse):
             messages.append(AssistantMessage(role: "tool", content: "Calling \(toolUse.name)..."))
@@ -318,10 +337,8 @@ final class AssistantManager {
     private func stopVoice() async {
         micTask?.cancel()
         micTask = nil
-        microphone?.stop()
-        microphone = nil
-        speaker?.stop()
-        speaker = nil
+        microphone?.stop(); microphone = nil
+        speaker?.stop(); speaker = nil
         await bidiAgent?.stop()
         bidiAgent = nil
         isVoiceActive = false

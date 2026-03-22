@@ -143,7 +143,8 @@ let package = Package(
                 "StrandsAgents", "StrandsBedrockProvider",
                 "StrandsBidiStreaming", "StrandsMLXBidiProvider", "StrandsMLXProvider",
             ],
-            path: "Examples/DesktopAssistant"
+            path: "Examples/DesktopAssistant",
+            exclude: ["Info.plist"]
         ),
 
         // Samples
