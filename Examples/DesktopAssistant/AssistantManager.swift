@@ -3,10 +3,13 @@ import AppKit
 import StrandsAgents
 import StrandsBedrockProvider
 import StrandsBidiStreaming
+import StrandsMLXBidiProvider
+import MLXAudioSTT
+import MLXAudioTTS
 
 enum VoiceBackend: String, CaseIterable {
+    case localMLX = "Local (On-Device)"
     case novaSonic = "Nova Sonic (Cloud)"
-    case localMLX = "Local MLX (On-Device)"
 }
 
 struct AssistantMessage: Identifiable {
@@ -158,22 +161,27 @@ final class AssistantManager {
             let audioFormat: AudioFormat
 
             switch voiceBackend {
+            case .localMLX:
+                print("[Voice] Loading local MLX models (STT + LLM + TTS)...")
+                statusMessage = "Loading models..."
+
+                let sttModel = try await GLMASRModel.fromPretrained("mlx-community/GLM-ASR-Nano-2512-4bit")
+                print("[Voice] STT model loaded")
+                let ttsModel = try await SopranoModel.fromPretrained("mlx-community/Soprano-80M-bf16")
+                print("[Voice] TTS model loaded")
+
+                audioFormat = .mlxDefault
+                bidi = MLXBidiFactory.createAgent(
+                    llmProcessor: MLXLLMProcessor(modelId: "mlx-community/Qwen3-8B-4bit", maxTokens: 1024),
+                    sttProcessor: MLXSTTProcessor(model: sttModel),
+                    ttsProcessor: MLXTTSProcessor(model: ttsModel),
+                    tools: tools,
+                    systemPrompt: desktopSystemPrompt
+                )
+
             case .novaSonic:
                 print("[Voice] Creating NovaSonicModel...")
-                let model = try NovaSonicModel(region: "us-east-1", voice: "tiffany")
-                audioFormat = .novaSonic
-                bidi = BidiAgent(
-                    model: model,
-                    tools: tools,
-                    config: BidiSessionConfig(
-                        instructions: desktopSystemPrompt,
-                        voice: "tiffany",
-                        inputAudioFormat: audioFormat,
-                        outputAudioFormat: audioFormat
-                    )
-                )
-            case .localMLX:
-                messages.append(AssistantMessage(role: "system", content: "Local MLX voice not yet wired. Using Nova Sonic."))
+                messages.append(AssistantMessage(role: "system", content: "Note: Nova Sonic bidi streaming requires HTTP/2 support not yet available in the AWS SDK for Swift. This may time out."))
                 let model = try NovaSonicModel(region: "us-east-1", voice: "tiffany")
                 audioFormat = .novaSonic
                 bidi = BidiAgent(
