@@ -1,7 +1,10 @@
 import SwiftUI
+import AppKit
 
 @main
 struct WritingAssistantApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -9,5 +12,15 @@ struct WritingAssistantApp: App {
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        true
     }
 }
