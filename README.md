@@ -216,42 +216,9 @@ struct WeatherReport: StructuredOutput {
 }
 ```
 
-## Voice Agents (Bidirectional Streaming)
+## Coming Soon
 
-### Cloud
-
-```swift
-import StrandsBidiStreaming
-
-let agent = BidiAgent(
-    model: OpenAIRealtimeModel(model: "gpt-4o-realtime-preview"),
-    tools: [wordCount],
-    config: BidiSessionConfig(voice: "alloy")
-)
-
-try await agent.start()
-Task { for await chunk in mic.audioStream { try await agent.send(.audio(chunk, format: .openAI)) } }
-for try await event in agent.receive() {
-    if case .audio(let data, _) = event { speaker.play(data) }
-}
-```
-
-Supported backends: OpenAI Realtime, AWS Nova Sonic, Google Gemini Live.
-
-### Local (fully on-device)
-
-```swift
-import StrandsMLXBidiProvider
-
-let agent = MLXBidiFactory.createAgent(
-    llmProcessor: MLXLLMProcessor(modelId: "mlx-community/Qwen3-8B-4bit"),
-    sttProcessor: MLXSTTProcessor(model: glmASRModel),
-    ttsProcessor: MLXTTSProcessor(model: sopranoModel),
-    tools: [wordCount]
-)
-```
-
-No network required. STT, LLM, and TTS all run on Apple Silicon.
+**Voice Agents (Bidirectional Streaming)** - Real-time voice conversation with tool calling. Cloud backends (OpenAI Realtime, AWS Nova Sonic, Google Gemini Live) and fully on-device voice (STT + LLM + TTS on Apple Silicon) are in active development. The infrastructure is built; we are working through platform-specific audio session issues before marking this stable.
 
 ## Authentication
 

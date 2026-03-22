@@ -139,10 +139,7 @@ let package = Package(
         ),
         .executableTarget(
             name: "DesktopAssistant",
-            dependencies: [
-                "StrandsAgents", "StrandsBedrockProvider",
-                "StrandsBidiStreaming", "StrandsMLXBidiProvider", "StrandsMLXProvider",
-            ],
+            dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
             path: "Examples/DesktopAssistant",
             exclude: ["Info.plist"]
         ),
