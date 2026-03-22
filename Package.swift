@@ -138,6 +138,16 @@ let package = Package(
             path: "Examples/MenuBarAgent"
         ),
         .executableTarget(
+            name: "WritingAssistant",
+            dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
+            path: "Examples/WritingAssistant"
+        ),
+        .executableTarget(
+            name: "PersonalAssistant",
+            dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
+            path: "Examples/PersonalAssistant"
+        ),
+        .executableTarget(
             name: "DesktopAssistant",
             dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
             path: "Examples/DesktopAssistant",
