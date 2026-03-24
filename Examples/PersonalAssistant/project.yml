@@ -7,7 +7,8 @@ options:
 
 packages:
   strands-agents-swift:
-    path: ../..
+    url: https://github.com/kunal732/strands-agents-swift
+    branch: master
 
 targets:
   PersonalAssistant:
