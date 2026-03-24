@@ -22,8 +22,10 @@ targets:
     dependencies:
       - package: strands-agents-swift
         product: StrandsAgents
+        embed: false
       - package: strands-agents-swift
         product: StrandsBedrockProvider
+        embed: false
     info:
       path: Info.plist
     settings:
