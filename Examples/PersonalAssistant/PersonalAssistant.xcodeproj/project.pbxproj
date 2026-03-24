@@ -1,0 +1,267 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		PA001001 /* PersonalAssistantApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = PA002001 /* PersonalAssistantApp.swift */; };
+		PA001002 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = PA002002 /* Models.swift */; };
+		PA001003 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PA002003 /* RootView.swift */; };
+		PA001004 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PA002004 /* SidebarView.swift */; };
+		PA001005 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = PA002005 /* ChatView.swift */; };
+		PA001006 /* MessageBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = PA002006 /* MessageBubble.swift */; };
+		PA001010 /* StrandsAgents in Frameworks */ = {isa = PBXBuildFile; productRef = PA005001 /* StrandsAgents */; };
+		PA001011 /* StrandsBedrockProvider in Frameworks */ = {isa = PBXBuildFile; productRef = PA005002 /* StrandsBedrockProvider */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		PA002000 /* PersonalAssistant.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PersonalAssistant.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		PA002001 /* PersonalAssistantApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalAssistantApp.swift; sourceTree = "<group>"; };
+		PA002002 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		PA002003 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		PA002004 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
+		PA002005 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		PA002006 /* MessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubble.swift; sourceTree = "<group>"; };
+		PA002007 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		PA003001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				PA001010 /* StrandsAgents in Frameworks */,
+				PA001011 /* StrandsBedrockProvider in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		PA004000 /* root */ = {
+			isa = PBXGroup;
+			children = (
+				PA004001 /* PersonalAssistant */,
+				PA004002 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		PA004001 /* PersonalAssistant */ = {
+			isa = PBXGroup;
+			children = (
+				PA002001 /* PersonalAssistantApp.swift */,
+				PA002002 /* Models.swift */,
+				PA002003 /* RootView.swift */,
+				PA002004 /* SidebarView.swift */,
+				PA002005 /* ChatView.swift */,
+				PA002006 /* MessageBubble.swift */,
+				PA002007 /* Info.plist */,
+			);
+			path = ..;
+			sourceTree = "<group>";
+		};
+		PA004002 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				PA002000 /* PersonalAssistant.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		PA006000 /* PersonalAssistant */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = PA007000 /* Build configuration list for PBXNativeTarget "PersonalAssistant" */;
+			buildPhases = (
+				PA003001 /* Frameworks */,
+				PA003002 /* Sources */,
+				PA003003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PersonalAssistant;
+			packageProductDependencies = (
+				PA005001 /* StrandsAgents */,
+				PA005002 /* StrandsBedrockProvider */,
+			);
+			productName = PersonalAssistant;
+			productReference = PA002000 /* PersonalAssistant.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		PA008000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+			};
+			buildConfigurationList = PA007001 /* Build configuration list for PBXProject "PersonalAssistant" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (en, Base);
+			mainGroup = PA004000;
+			packageReferences = (
+				PA009000 /* XCRemoteSwiftPackageReference "strands-agents-swift" */,
+			);
+			productRefGroup = PA004002 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (PA006000 /* PersonalAssistant */);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		PA003003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		PA003002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				PA001001 /* PersonalAssistantApp.swift in Sources */,
+				PA001002 /* Models.swift in Sources */,
+				PA001003 /* RootView.swift in Sources */,
+				PA001004 /* SidebarView.swift in Sources */,
+				PA001005 /* ChatView.swift in Sources */,
+				PA001006 /* MessageBubble.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		PA007010 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = "../Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks");
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.communitystrands.PersonalAssistant";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		PA007011 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = "../Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks");
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.communitystrands.PersonalAssistant";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		PA007020 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = ("DEBUG=1", "$(inherited)");
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		PA007021 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		PA007000 /* Build configuration list for PBXNativeTarget "PersonalAssistant" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (PA007010 /* Debug */, PA007011 /* Release */);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		PA007001 /* Build configuration list for PBXProject "PersonalAssistant" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (PA007020 /* Debug */, PA007021 /* Release */);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		PA009000 /* XCRemoteSwiftPackageReference "strands-agents-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kunal732/strands-agents-swift";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		PA005001 /* StrandsAgents */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = PA009000;
+			productName = StrandsAgents;
+		};
+		PA005002 /* StrandsBedrockProvider */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = PA009000;
+			productName = StrandsBedrockProvider;
+		};
+/* End XCSwiftPackageProductDependency section */
+
+	};
+	rootObject = PA008000 /* Project object */;
+}

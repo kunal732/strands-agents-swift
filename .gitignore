@@ -1,6 +1,8 @@
 .build/
 .swiftpm/
 *.xcodeproj/
+!Examples/WritingAssistant/WritingAssistant.xcodeproj/
+!Examples/PersonalAssistant/PersonalAssistant.xcodeproj/
 xcuserdata/
 DerivedData/
 .DS_Store
