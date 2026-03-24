@@ -1,0 +1,31 @@
+name: PersonalAssistant
+options:
+  bundleIdPrefix: com.communitystrands
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "15"
+
+packages:
+  strands-agents-swift:
+    path: ../..
+
+targets:
+  PersonalAssistant:
+    type: application
+    platform: macOS
+    sources: [.]
+    exclude:
+      - project.yml
+      - README.md
+      - run.sh
+    dependencies:
+      - package: strands-agents-swift
+        product: StrandsAgents
+      - package: strands-agents-swift
+        product: StrandsBedrockProvider
+    info:
+      path: Info.plist
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
