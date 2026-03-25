@@ -62,6 +62,23 @@ public final class ToolRegistry: @unchecked Sendable {
         lock.withLock { tools.count }
     }
 
+    /// All registered tools in insertion order (for schema inference).
+    public var allTools: [any AgentTool] {
+        lock.withLock { Array(tools.values) }
+    }
+
+    /// Replace a tool at a logical index (used after schema inference resolves a Tool).
+    public func updateTool(at index: Int, with tool: any AgentTool) {
+        lock.withLock {
+            // Remove old entry with the placeholder name and register the resolved one
+            let keys = Array(tools.keys)
+            if index < keys.count {
+                tools.removeValue(forKey: keys[index])
+            }
+            tools[tool.name] = tool
+        }
+    }
+
     /// Validate a tool name against the standard pattern.
     public static func isValidToolName(_ name: String) -> Bool {
         name.wholeMatch(of: validNamePattern) != nil

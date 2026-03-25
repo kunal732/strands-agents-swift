@@ -163,6 +163,9 @@ public final class Agent: @unchecked Sendable {
         try acquireLock()
         defer { releaseLock() }
 
+        // Infer schemas for any Tool instances that need it
+        try await resolveToolSchemas()
+
         appendUserInput(input)
         try await hookRegistry.invoke(BeforeInvocationEvent(messages: messages))
 
@@ -258,6 +261,7 @@ public final class Agent: @unchecked Sendable {
                 do {
                     try self.acquireLock()
 
+                    try await self.resolveToolSchemas()
                     self.appendUserInput(input)
 
                     try await self.hookRegistry.invoke(BeforeInvocationEvent(messages: self.messages))
@@ -393,6 +397,43 @@ public final class Agent: @unchecked Sendable {
             agentState: state,
             routingHints: routingHints
         )
+    }
+
+    /// Resolve schemas for any Tool instances that haven't been inferred yet.
+    private func resolveToolSchemas() async throws {
+        // Collect tools that need inference
+        var unresolvedIndices: [(index: Int, tool: Tool)] = []
+        for (i, agentTool) in toolRegistry.allTools.enumerated() {
+            if let tool = agentTool as? Tool, tool.needsInference {
+                unresolvedIndices.append((i, tool))
+            }
+        }
+        guard !unresolvedIndices.isEmpty else { return }
+
+        // Build inference prompt
+        let toolInfos = unresolvedIndices.enumerated().map { (offset, pair) in
+            (index: offset, description: pair.tool.toolSpec.description, paramTypes: pair.tool.paramTypes)
+        }
+        let prompt = ToolSchemaInference.buildInferencePrompt(tools: toolInfos)
+
+        // Ask the model
+        let ctx = RoutingContext(messages: [.user(prompt)], toolSpecs: nil, systemPrompt: nil,
+                                  hints: routingHints, deviceCapabilities: .current)
+        let provider = try await router.route(context: ctx)
+        let stream = provider.stream(messages: [.user(prompt)], toolSpecs: nil, systemPrompt: "You are a tool naming assistant. Return only JSON.", toolChoice: nil)
+        let result = try await StreamAggregator().aggregate(stream: stream)
+        let responseText = result.message.textContent ?? ""
+
+        // Parse and apply
+        guard let schemas = ToolSchemaInference.parseInferenceResponse(responseText) else { return }
+
+        for (offset, pair) in unresolvedIndices.enumerated() {
+            guard offset < schemas.count else { continue }
+            let schema = schemas[offset]
+            var tool = pair.tool
+            tool.resolveSchema(toolName: schema.name, paramNames: schema.params)
+            toolRegistry.updateTool(at: pair.index, with: tool)
+        }
     }
 
     private func appendUserInput(_ input: AgentInput) {
