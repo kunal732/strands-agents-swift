@@ -2,163 +2,132 @@ import Foundation
 
 // MARK: - JSONToolParam
 
-/// A Swift type that can be used as a tool parameter.
-/// Handles JSON encoding/decoding and schema type string automatically.
+/// A Swift type that maps to a JSON schema type for tool parameters.
 public protocol JSONToolParam: Sendable {
     static var jsonType: String { get }
-    static func extract(from json: JSONValue, key: String) -> Self
 }
 
-extension String: JSONToolParam {
-    public static var jsonType: String { "string" }
-    public static func extract(from json: JSONValue, key: String) -> String {
-        json[key]?.foundationValue as? String ?? ""
+extension String: JSONToolParam  { public static var jsonType: String { "string" } }
+extension Int: JSONToolParam     { public static var jsonType: String { "integer" } }
+extension Double: JSONToolParam  { public static var jsonType: String { "number" } }
+extension Bool: JSONToolParam    { public static var jsonType: String { "boolean" } }
+
+// MARK: - ToolInput
+
+/// Typed accessor for tool parameters that also auto-discovers the schema.
+///
+/// When a `Tool` is created, the handler runs once in "recording" mode.
+/// Every `.string()`, `.int()`, `.double()`, `.bool()` call records the
+/// parameter name and type. The JSON schema is built from those recordings.
+///
+/// During real execution, the same calls extract values from the model's JSON.
+///
+/// ```swift
+/// Tool("calculator", "Evaluate a math expression.") { args in
+///     let expression = args.string("expression")
+///     // Schema: {"expression": {"type": "string"}}
+///     return eval(expression)
+/// }
+/// ```
+public final class ToolInput: @unchecked Sendable {
+    private let json: JSONValue?
+    private let recording: Bool
+    private(set) var params: [(name: String, type: String)] = []
+
+    init(recording: Bool) {
+        self.json = nil
+        self.recording = true
     }
-}
 
-extension Int: JSONToolParam {
-    public static var jsonType: String { "integer" }
-    public static func extract(from json: JSONValue, key: String) -> Int {
-        (json[key]?.foundationValue as? Int)
-            ?? (json[key]?.foundationValue as? Double).map(Int.init)
-            ?? 0
+    init(json: JSONValue) {
+        self.json = json
+        self.recording = false
     }
-}
 
-extension Double: JSONToolParam {
-    public static var jsonType: String { "number" }
-    public static func extract(from json: JSONValue, key: String) -> Double {
-        (json[key]?.foundationValue as? Double)
-            ?? (json[key]?.foundationValue as? Int).map(Double.init)
-            ?? 0
+    /// Read a string parameter.
+    public func string(_ key: String, default fallback: String = "") -> String {
+        if recording { params.append((key, "string")); return fallback }
+        return json?[key]?.foundationValue as? String ?? fallback
     }
-}
 
-extension Bool: JSONToolParam {
-    public static var jsonType: String { "boolean" }
-    public static func extract(from json: JSONValue, key: String) -> Bool {
-        json[key]?.foundationValue as? Bool ?? false
+    /// Read an integer parameter.
+    public func int(_ key: String, default fallback: Int = 0) -> Int {
+        if recording { params.append((key, "integer")); return fallback }
+        return (json?[key]?.foundationValue as? Int)
+            ?? (json?[key]?.foundationValue as? Double).map(Int.init)
+            ?? fallback
+    }
+
+    /// Read a floating-point parameter.
+    public func double(_ key: String, default fallback: Double = 0) -> Double {
+        if recording { params.append((key, "number")); return fallback }
+        return (json?[key]?.foundationValue as? Double)
+            ?? (json?[key]?.foundationValue as? Int).map(Double.init)
+            ?? fallback
+    }
+
+    /// Read a boolean parameter.
+    public func bool(_ key: String, default fallback: Bool = false) -> Bool {
+        if recording { params.append((key, "boolean")); return fallback }
+        return json?[key]?.foundationValue as? Bool ?? fallback
     }
 }
 
 // MARK: - Tool
 
-/// Create a tool directly from a Swift function.
-///
-/// Pass your function as `code` and list the parameter names in `params`.
-/// Types and schema are inferred automatically -- no manual JSON needed.
+/// Define a tool from a name, description, and handler. The parameter schema
+/// is auto-discovered from the handler -- no manual schema or params needed.
 ///
 /// ```swift
-/// func fetchWeather(city: String, unit: String) -> String {
-///     "22°C in \(city)"
+/// let weatherTool = Tool("get_weather", "Get the current weather for a city.") { args in
+///     let city = args.string("city")
+///     let unit = args.string("unit")
+///     return "\(Int.random(in: 60...90))°F in \(city)"
 /// }
+/// // Schema auto-generated: {"city": "string", "unit": "string"}
 ///
-/// let weatherTool = Tool(
-///     name: "get_weather",
-///     description: "Get the current weather for a city.",
-///     params: ("city", "unit"),
-///     code: fetchWeather
-/// )
+/// let agent = Agent(model: provider, tools: [weatherTool])
 /// ```
-public struct Tool: AgentTool {
+///
+/// Each `args.string()`, `args.int()`, `args.double()`, `args.bool()` call
+/// simultaneously declares a parameter (for the schema) and reads its value
+/// (during execution). Write the handler once -- the schema comes for free.
+public struct Tool: AgentTool, Sendable {
     public let name: String
     public let toolSpec: ToolSpec
-    private let handler: @Sendable (JSONValue) async throws -> String
+    private let handler: @Sendable (JSONValue) -> String
 
-    public func call(toolUse: ToolUseBlock, context: ToolContext) async throws -> ToolResultBlock {
-        do {
-            let result = try await handler(toolUse.input)
-            return ToolResultBlock(toolUseId: toolUse.toolUseId, status: .success, content: [.text(result)])
-        } catch {
-            return ToolResultBlock(toolUseId: toolUse.toolUseId, status: .error, content: [.text(error.localizedDescription)])
-        }
-    }
-
-    // MARK: - 1 parameter
-
-    public init<A: JSONToolParam>(
-        name: String,
-        description: String,
-        params p: String,
-        code: @escaping @Sendable (A) -> String
+    /// Create a tool with auto-discovered schema.
+    ///
+    /// The handler runs once at init time in "recording" mode to discover
+    /// parameter names and types. During real execution it runs normally.
+    public init(
+        _ name: String,
+        _ description: String,
+        handler: @escaping @Sendable (ToolInput) -> String
     ) {
         self.name = name
-        self.toolSpec = ToolSpec(name: name, description: description, inputSchema: Self.schema([(p, A.jsonType)]))
-        self.handler = { json in code(A.extract(from: json, key: p)) }
-    }
 
-    public init<A: JSONToolParam, R: CustomStringConvertible>(
-        name: String,
-        description: String,
-        params p: String,
-        code: @escaping @Sendable (A) -> R
-    ) {
-        self.name = name
-        self.toolSpec = ToolSpec(name: name, description: description, inputSchema: Self.schema([(p, A.jsonType)]))
-        self.handler = { json in "\(code(A.extract(from: json, key: p)))" }
-    }
+        // Dry-run the handler to discover params
+        let recorder = ToolInput(recording: true)
+        _ = handler(recorder)
 
-    // MARK: - 2 parameters
-
-    public init<A: JSONToolParam, B: JSONToolParam>(
-        name: String,
-        description: String,
-        params p: (String, String),
-        code: @escaping @Sendable (A, B) -> String
-    ) {
-        self.name = name
-        self.toolSpec = ToolSpec(name: name, description: description, inputSchema: Self.schema([(p.0, A.jsonType), (p.1, B.jsonType)]))
-        self.handler = { json in code(A.extract(from: json, key: p.0), B.extract(from: json, key: p.1)) }
-    }
-
-    public init<A: JSONToolParam, B: JSONToolParam, R: CustomStringConvertible>(
-        name: String,
-        description: String,
-        params p: (String, String),
-        code: @escaping @Sendable (A, B) -> R
-    ) {
-        self.name = name
-        self.toolSpec = ToolSpec(name: name, description: description, inputSchema: Self.schema([(p.0, A.jsonType), (p.1, B.jsonType)]))
-        self.handler = { json in "\(code(A.extract(from: json, key: p.0), B.extract(from: json, key: p.1)))" }
-    }
-
-    // MARK: - 3 parameters
-
-    public init<A: JSONToolParam, B: JSONToolParam, C: JSONToolParam>(
-        name: String,
-        description: String,
-        params p: (String, String, String),
-        code: @escaping @Sendable (A, B, C) -> String
-    ) {
-        self.name = name
-        self.toolSpec = ToolSpec(name: name, description: description, inputSchema: Self.schema([(p.0, A.jsonType), (p.1, B.jsonType), (p.2, C.jsonType)]))
-        self.handler = { json in code(A.extract(from: json, key: p.0), B.extract(from: json, key: p.1), C.extract(from: json, key: p.2)) }
-    }
-
-    public init<A: JSONToolParam, B: JSONToolParam, C: JSONToolParam, R: CustomStringConvertible>(
-        name: String,
-        description: String,
-        params p: (String, String, String),
-        code: @escaping @Sendable (A, B, C) -> R
-    ) {
-        self.name = name
-        self.toolSpec = ToolSpec(name: name, description: description, inputSchema: Self.schema([(p.0, A.jsonType), (p.1, B.jsonType), (p.2, C.jsonType)]))
-        self.handler = { json in "\(code(A.extract(from: json, key: p.0), B.extract(from: json, key: p.1), C.extract(from: json, key: p.2)))" }
-    }
-
-    // MARK: - Schema builder
-
-    private static func schema(_ params: [(name: String, type: String)]) -> JSONSchema {
+        // Build JSON schema from recorded params
         var properties: [String: JSONValue] = [:]
         var required: [JSONValue] = []
-        for (name, type) in params {
-            properties[name] = .object(["type": .string(type)])
-            required.append(.string(name))
+        for (paramName, paramType) in recorder.params {
+            properties[paramName] = .object(["type": .string(paramType)])
+            required.append(.string(paramName))
         }
-        return [
-            "type": "object",
-            "properties": .object(properties),
-            "required": .array(required),
-        ]
+        var schema: JSONSchema = ["type": "object", "properties": .object(properties)]
+        if !required.isEmpty { schema["required"] = .array(required) }
+
+        self.toolSpec = ToolSpec(name: name, description: description, inputSchema: schema)
+        self.handler = { json in handler(ToolInput(json: json)) }
+    }
+
+    public func call(toolUse: ToolUseBlock, context: ToolContext) async throws -> ToolResultBlock {
+        let result = handler(toolUse.input)
+        return ToolResultBlock(toolUseId: toolUse.toolUseId, status: .success, content: [.text(result)])
     }
 }
