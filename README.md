@@ -35,17 +35,19 @@ Add the modules you need:
 import StrandsAgents
 import StrandsBedrockProvider
 
-/// Count the number of words in text.
-@Tool
+// Write a normal Swift function
 func wordCount(text: String) -> Int {
     text.split(whereSeparator: \.isWhitespace).count
 }
+
+// Wrap it as a tool with a description
+let wordCountTool = Tool(wordCount, "Count the number of words in text.")
 
 let agent = Agent(
     model: try BedrockProvider(config: BedrockConfig(
         modelId: "us.anthropic.claude-sonnet-4-20250514-v1:0"
     )),
-    tools: [wordCount]
+    tools: [wordCountTool]
 )
 
 let result = try await agent.run("How many words are in this sentence?")
@@ -110,64 +112,61 @@ let agent = Agent(
 
 ## Tools
 
-The Swift implementation of Strands Agents uses a `@Tool` macro to generate the boilerplate for defining a tool. The macro derives the tool name, JSON schema, and `AgentTool` conformance from the function signature. The doc comment becomes the tool description that the model sees.
+Write a normal Swift function, wrap it with `Tool()` and a description. That's it.
 
 ```swift
+func wordCount(text: String) -> Int {
+    text.split(whereSeparator: \.isWhitespace).count
+}
+
+func calculator(expression: String) -> String {
+    let result = NSExpression(format: expression).expressionValue(with: nil, context: nil)
+    return "\(result ?? "error")"
+}
+
+let agent = Agent(model: provider, tools: [
+    Tool(wordCount, "Count the number of words in text."),
+    Tool(calculator, "Evaluate a math expression."),
+])
+```
+
+The tool name and parameter schema are inferred automatically. Your functions stay regular Swift functions that you can call directly:
+
+```swift
+let count = wordCount(text: "hello world")  // 2
+```
+
+You can also define tools inline:
+
+```swift
+let time = Tool("Get the current date and time.") {
+    ISO8601DateFormatter().string(from: Date())
+}
+```
+
+### @Tool macro (opt-in)
+
+For zero-boilerplate tool definitions, add `StrandsAgentsToolMacros` to your target:
+
+```swift
+.product(name: "StrandsAgentsToolMacros", package: "strands-agents-swift")
+```
+
+Then annotate any function:
+
+```swift
+import StrandsAgentsToolMacros
+
 /// Count the number of words in text.
 @Tool
 func wordCount(text: String) -> Int {
     text.split(whereSeparator: \.isWhitespace).count
 }
 
-/// Evaluate a math expression
-@Tool
-func calculator(expression: String) -> String {
-    let result = NSExpression(format: expression).expressionValue(with: nil, context: nil)
-    return "\(result ?? "error")"
-}
-
-let agent = Agent(model: provider, tools: [wordCount, calculator])
+let agent = Agent(model: provider, tools: [wordCount])
 ```
 
-`@Tool` functions are still regular Swift functions - you can call them directly:
-
-```swift
-let count = wordCount(text: "hello world")  // 2
-```
-
-### Defining tools without the macro
-
-You can also define tools by conforming to the `AgentTool` protocol directly:
-
-```swift
-struct WordCount: AgentTool {
-    let name = "word_count"
-
-    var toolSpec: ToolSpec {
-        ToolSpec(
-            name: name,
-            description: "Count the number of words in text.",
-            inputSchema: [
-                "type": "object",
-                "properties": ["text": ["type": "string", "description": "The text to count words in"]],
-                "required": ["text"],
-            ]
-        )
-    }
-
-    func call(toolUse: ToolUseBlock, context: ToolContext) async throws -> ToolResultBlock {
-        let text = toolUse.input["text"]?.foundationValue as? String ?? ""
-        let count = text.split(whereSeparator: \.isWhitespace).count
-        return ToolResultBlock(
-            toolUseId: toolUse.toolUseId,
-            status: .success,
-            content: [.text("\(count)")]
-        )
-    }
-}
-
-let agent = Agent(model: provider, tools: [WordCount()])
-```
+The macro reads the function signature at compile time and generates the tool name, JSON schema, and description from the doc comment. Xcode will ask to trust the macro plugin on first use (one-time, per machine).
 
 Tools requested in the same turn run concurrently by default.
 
@@ -296,6 +295,7 @@ Per-message persistence with atomic writes, version tracking, and broken history
 | Module | Description | Dependencies |
 |--------|-------------|-------------|
 | `StrandsAgents` | Core: agent, tools, hooks, multi-agent, session, MCP | Foundation |
+| `StrandsAgentsToolMacros` | Opt-in `@Tool` and `@StructuredOutput` macros | SwiftSyntax |
 | `StrandsBedrockProvider` | AWS Bedrock ConverseStream | aws-sdk-swift |
 | `StrandsMLXProvider` | On-device LLM inference | mlx-swift-lm |
 | `StrandsAnthropicProvider` | Anthropic Messages API | - |
@@ -326,4 +326,4 @@ Per-message persistence with atomic writes, version tracking, and broken history
 
 ## License
 
-MIT
+Apache 2.0
