@@ -141,30 +141,6 @@ let time = Tool("Get the current date and time.") {
 }
 ```
 
-### @Tool macro (opt-in)
-
-For zero-boilerplate tool definitions, add `StrandsAgentsToolMacros` to your target:
-
-```swift
-.product(name: "StrandsAgentsToolMacros", package: "strands-agents-swift")
-```
-
-Then annotate any function:
-
-```swift
-import StrandsAgentsToolMacros
-
-/// Count the number of words in text.
-@Tool
-func wordCount(text: String) -> Int {
-    text.split(whereSeparator: \.isWhitespace).count
-}
-
-let agent = Agent(model: provider, tools: [wordCount])
-```
-
-The macro reads the function signature at compile time and generates the tool name, JSON schema, and description from the doc comment. Xcode will ask to trust the macro plugin on first use (one-time, per machine).
-
 Tools requested in the same turn run concurrently by default.
 
 ## Structured Output
@@ -287,12 +263,9 @@ Per-message persistence with atomic writes, version tracking, and broken history
 
 ## Modules
 
-| Module | Description |
-|--------|-------------|
-| `StrandsAgents` | Everything: agent, tools, all providers, observability, voice streaming |
-| `StrandsAgentsToolMacros` | Opt-in `@Tool` and `@StructuredOutput` macros (triggers Xcode trust prompt) |
+## Modules
 
-`StrandsAgents` includes Bedrock, MLX, Anthropic, OpenAI, and Gemini providers; OpenTelemetry observability; and bidirectional voice streaming -- all in one import. `StrandsAgentsToolMacros` is opt-in so users who only use `Tool()` never see the Xcode macro trust dialog.
+`StrandsAgents` is the only module. It includes the agent loop, all providers (Bedrock, MLX, Anthropic, OpenAI, Gemini), OpenTelemetry observability, and bidirectional voice streaming -- all in one import, with no macros and no Xcode trust prompts.
 
 ## Platform Support
 
