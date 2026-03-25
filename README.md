@@ -145,30 +145,9 @@ Tools requested in the same turn run concurrently by default.
 
 ## Structured Output
 
-`runStructured` forces the model to produce JSON matching a schema you define, then decodes it directly into your Swift type. Under the hood it registers a hidden tool whose input schema is your type's `jsonSchema`; the model must call that tool to respond, guaranteeing the output is valid and decodable.
+`runStructured` forces the model to produce JSON matching a schema you define, then decodes it directly into your Swift type. The model must call a hidden tool with valid JSON matching your schema, so the output is always decodable.
 
-Apply `@StructuredOutput` to a `Codable` struct - the macro synthesizes the JSON schema automatically. Then call `agent.runStructured(prompt)`; the return type is inferred from context.
-
-```swift
-@StructuredOutput
-struct Recipe {
-    let name: String
-    let ingredients: [String]
-    let steps: [String]
-    let note: String?   // optional - omitted from "required"
-}
-
-let agent = Agent(model: provider)
-let recipe: Recipe = try await agent.runStructured("Give me a pasta recipe")
-
-print(recipe.name)              // "Spaghetti Carbonara"
-print(recipe.ingredients)       // ["200g spaghetti", "3 eggs", ...]
-print(recipe.steps[0])          // "Boil salted water..."
-```
-
-The macro maps Swift types to JSON schema: `String` -> `"string"`, `Int` -> `"integer"`, `Double`/`Float` -> `"number"`, `Bool` -> `"boolean"`, `[T]` -> `"array"`, and `T?` marks the property optional (omitted from `"required"`).
-
-If you need a custom schema, skip the macro and conform manually:
+Conform your struct to `StructuredOutput` and `Codable`, then provide a `jsonSchema`:
 
 ```swift
 struct WeatherReport: StructuredOutput {
@@ -260,8 +239,6 @@ let repo = S3SessionRepository(bucket: "my-app-sessions", prefix: "users/\(userI
 ```
 
 Per-message persistence with atomic writes, version tracking, and broken history repair.
-
-## Modules
 
 ## Modules
 
