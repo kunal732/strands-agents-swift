@@ -5,30 +5,26 @@
 
 import Foundation
 import StrandsAgents
-import StrandsAgentsToolMacros
 
 let provider = try BedrockProvider(config: BedrockConfig(
     modelId: "us.anthropic.claude-sonnet-4-20250514-v1:0",
     region: "us-east-1"
 ))
 
-// Tools for each specialist
-@Tool
 func searchNotes(query: String) -> String {
     "Found 3 notes matching '\(query)': 1) Meeting notes from Monday, 2) Project plan draft, 3) Weekly goals"
 }
-
-@Tool
 func createReminder(title: String, dueDate: String) -> String {
     "Created reminder: '\(title)' due \(dueDate)"
 }
-
-@Tool
 func checkCalendar(date: String) -> String {
     "Calendar for \(date): 10am Team standup, 2pm Design review, 4pm 1:1 with manager"
 }
 
-// Agents
+let searchNotesTool   = Tool(searchNotes,   "Search notes by keyword.", name: "search_notes")
+let createReminderTool = Tool(createReminder, "Create a reminder with a title and due date.", name: "create_reminder")
+let checkCalendarTool  = Tool(checkCalendar,  "Check the calendar for a given date.", name: "check_calendar")
+
 let coordinator = Agent(
     model: provider,
     systemPrompt: """
@@ -42,19 +38,19 @@ let coordinator = Agent(
 
 let calendarAgent = Agent(
     model: provider,
-    tools: [checkCalendar],
+    tools: [checkCalendarTool],
     systemPrompt: "You manage the user's calendar. Check availability, describe the schedule, and answer scheduling questions. Be concise."
 )
 
 let notesAgent = Agent(
     model: provider,
-    tools: [searchNotes],
+    tools: [searchNotesTool],
     systemPrompt: "You search and manage the user's notes. Find relevant notes and summarize them. Be concise."
 )
 
 let tasksAgent = Agent(
     model: provider,
-    tools: [createReminder],
+    tools: [createReminderTool],
     systemPrompt: "You manage reminders and tasks. Create reminders, list tasks, and help the user stay organized. Be concise."
 )
 

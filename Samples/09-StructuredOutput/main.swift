@@ -1,13 +1,11 @@
 // 09 - Structured Output
 // Forces the model to return a typed Swift struct instead of free-form text.
-// The @StructuredOutput macro synthesizes the JSON schema from stored properties.
+// Conform your struct to StructuredOutput and provide a jsonSchema.
 
 import Foundation
 import StrandsAgents
-import StrandsAgentsToolMacros
 
-@StructuredOutput
-struct MovieRecommendation {
+struct MovieRecommendation: Codable, StructuredOutput {
     let title: String
     let year: Int
     let genre: String
@@ -15,6 +13,22 @@ struct MovieRecommendation {
     let rating: Double
     let streamingOn: [String]
     let similarMovies: [String]
+
+    static var jsonSchema: JSONSchema {
+        [
+            "type": "object",
+            "properties": [
+                "title":         ["type": "string"],
+                "year":          ["type": "integer"],
+                "genre":         ["type": "string"],
+                "reason":        ["type": "string"],
+                "rating":        ["type": "number"],
+                "streamingOn":   ["type": "array", "items": ["type": "string"]],
+                "similarMovies": ["type": "array", "items": ["type": "string"]],
+            ],
+            "required": ["title", "year", "genre", "reason", "rating", "streamingOn", "similarMovies"]
+        ]
+    }
 }
 
 let agent = Agent(

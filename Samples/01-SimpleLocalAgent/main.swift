@@ -4,16 +4,15 @@
 
 import Foundation
 import StrandsAgents
-import StrandsAgentsToolMacros
 
-@Tool
 func wordCount(text: String) -> Int {
     text.split(whereSeparator: \.isWhitespace).count
 }
+let wordCountTool = Tool(wordCount, "Count the number of words in the given text.", name: "word_count")
 
 let agent = Agent(
     model: MLXProvider(modelId: "mlx-community/Qwen3-8B-4bit"),
-    tools: [wordCount],
+    tools: [wordCountTool],
     systemPrompt: "You are a helpful assistant. Use tools when needed. Be concise."
 )
 

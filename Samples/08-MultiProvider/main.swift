@@ -7,15 +7,14 @@
 
 import Foundation
 import StrandsAgents
-import StrandsAgentsToolMacros
 
-@Tool
 func calculator(expression: String) -> String {
     guard let result = NSExpression(format: expression).expressionValue(with: nil, context: nil) else {
         return "Error: invalid expression"
     }
     return "\(result)"
 }
+let calculatorTool = Tool(calculator, "Evaluate a math expression.", name: "calculator")
 
 let prompt = "What is 99 * 77? Use the calculator tool."
 
@@ -39,7 +38,7 @@ for (name, provider) in providers {
 
     let agent = Agent(
         model: provider,
-        tools: [calculator],
+        tools: [calculatorTool],
         systemPrompt: "You are a helpful assistant. Use the calculator tool for math. Be concise."
     )
 

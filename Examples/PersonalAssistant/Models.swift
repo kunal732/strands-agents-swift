@@ -1,6 +1,5 @@
 import SwiftUI
 import StrandsAgents
-import StrandsAgentsToolMacros
 
 // MARK: - Data types
 
@@ -28,15 +27,19 @@ let allSpecialists: [SpecialistInfo] = [
 
 // MARK: - Tools
 
-@Tool nonisolated func checkCalendar(date: String) -> String {
+nonisolated func checkCalendar(date: String) -> String {
     "Calendar for \(date): 10am Team standup, 2pm Design review, 4pm 1:1 with manager"
 }
-@Tool nonisolated func searchNotes(query: String) -> String {
+nonisolated func searchNotes(query: String) -> String {
     "Found 3 notes matching '\(query)': Meeting notes from Monday, Project plan draft, Weekly goals"
 }
-@Tool nonisolated func createReminder(title: String, dueDate: String) -> String {
+nonisolated func createReminder(title: String, dueDate: String) -> String {
     "Reminder created: '\(title)' due \(dueDate)"
 }
+
+let checkCalendarTool   = Tool(checkCalendar,   "Check the calendar for a given date.", name: "check_calendar")
+let searchNotesTool     = Tool(searchNotes,     "Search notes by keyword.", name: "search_notes")
+let createReminderTool  = Tool(createReminder,  "Create a reminder with a title and due date.", name: "create_reminder")
 
 // MARK: - View model
 
@@ -65,15 +68,15 @@ final class AssistantModel {
                     """)),
             SwarmMember(id: "calendar-agent",
                 description: "Calendar and scheduling",
-                agent: Agent(model: p, tools: [checkCalendar],
+                agent: Agent(model: p, tools: [checkCalendarTool],
                     systemPrompt: "You manage the user's calendar. Use checkCalendar and answer concisely.")),
             SwarmMember(id: "notes-agent",
                 description: "Notes and documents",
-                agent: Agent(model: p, tools: [searchNotes],
+                agent: Agent(model: p, tools: [searchNotesTool],
                     systemPrompt: "You manage notes. Use searchNotes and answer concisely.")),
             SwarmMember(id: "tasks-agent",
                 description: "Reminders and tasks",
-                agent: Agent(model: p, tools: [createReminder],
+                agent: Agent(model: p, tools: [createReminderTool],
                     systemPrompt: "You manage reminders. Use createReminder and confirm what was created.")),
         ], entryPoint: "coordinator")
     }

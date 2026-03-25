@@ -4,22 +4,21 @@
 
 import Foundation
 import StrandsAgents
-import StrandsAgentsToolMacros
 
-@Tool
 func calculator(expression: String) -> String {
     guard let result = NSExpression(format: expression).expressionValue(with: nil, context: nil) else {
         return "Error: invalid expression"
     }
     return "\(result)"
 }
+let calculatorTool = Tool(calculator, "Evaluate a math expression.", name: "calculator")
 
 let agent = Agent(
     model: try BedrockProvider(config: BedrockConfig(
         modelId: "us.anthropic.claude-sonnet-4-20250514-v1:0",
         region: "us-east-1"
     )),
-    tools: [calculator],
+    tools: [calculatorTool],
     systemPrompt: "You are a helpful assistant. Use the calculator tool for math. Be concise."
 )
 

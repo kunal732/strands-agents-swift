@@ -8,14 +8,13 @@ import Foundation
 import StrandsAgents
 import MLXAudioSTT
 import MLXAudioTTS
-import StrandsAgentsToolMacros
 
-@Tool
 func getCurrentTime(timezone: String = "local") -> String {
     let formatter = DateFormatter()
     formatter.dateFormat = "h:mm a"
     return formatter.string(from: Date())
 }
+let getCurrentTimeTool = Tool(getCurrentTime, "Get the current time.", name: "get_current_time")
 
 print("Loading local voice models (STT + LLM + TTS)...")
 
@@ -26,7 +25,7 @@ let agent = MLXBidiFactory.createAgent(
     llmProcessor: MLXLLMProcessor(),
     sttProcessor: MLXSTTProcessor(model: sttModel),
     ttsProcessor: MLXTTSProcessor(model: ttsModel),
-    tools: [getCurrentTime],
+    tools: [getCurrentTimeTool],
     systemPrompt: "You are a helpful on-device voice assistant. Keep responses short."
 )
 

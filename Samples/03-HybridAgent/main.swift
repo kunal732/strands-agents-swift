@@ -4,14 +4,13 @@
 
 import Foundation
 import StrandsAgents
-import StrandsAgentsToolMacros
 
-@Tool
 func getCurrentTime(timezone: String = "local") -> String {
     let formatter = DateFormatter()
     formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
     return formatter.string(from: Date())
 }
+let getCurrentTimeTool = Tool(getCurrentTime, "Get the current date and time.", name: "get_current_time")
 
 let agent = Agent(
     router: HybridRouter(
@@ -22,7 +21,7 @@ let agent = Agent(
         )),
         policy: LatencySensitivePolicy()
     ),
-    tools: [getCurrentTime],
+    tools: [getCurrentTimeTool],
     systemPrompt: "You are a helpful assistant. Be concise."
 )
 
