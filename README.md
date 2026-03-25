@@ -35,12 +35,9 @@ Add the modules you need:
 import StrandsAgents
 import StrandsBedrockProvider
 
-// Write a normal Swift function
 func wordCount(text: String) -> Int {
     text.split(whereSeparator: \.isWhitespace).count
 }
-
-// Wrap it as a tool with a description
 let wordCountTool = Tool(wordCount, "Count the number of words in text.")
 
 let agent = Agent(
@@ -124,10 +121,10 @@ func calculator(expression: String) -> String {
     return "\(result ?? "error")"
 }
 
-let agent = Agent(model: provider, tools: [
-    Tool(wordCount, "Count the number of words in text."),
-    Tool(calculator, "Evaluate a math expression."),
-])
+let wordCountTool = Tool(wordCount, "Count the number of words in text.")
+let calculatorTool = Tool(calculator, "Evaluate a math expression.")
+
+let agent = Agent(model: provider, tools: [wordCountTool, calculatorTool])
 ```
 
 The tool name and parameter schema are inferred automatically. Your functions stay regular Swift functions that you can call directly:
