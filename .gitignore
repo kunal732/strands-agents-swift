@@ -7,4 +7,5 @@ xcuserdata/
 DerivedData/
 .DS_Store
 default.profraw
-*.md session brief
+*__session-brief__*
+.claude/
