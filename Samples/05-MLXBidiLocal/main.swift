@@ -10,6 +10,7 @@ import StrandsMLXBidiProvider
 import StrandsMLXProvider
 import MLXAudioSTT
 import MLXAudioTTS
+import StrandsAgentsToolMacros
 
 @Tool
 func getCurrentTime(timezone: String = "local") -> String {

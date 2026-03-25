@@ -1,3 +1,5 @@
+import StrandsAgents
+
 /// Transforms a Swift function into an agent tool.
 ///
 /// The macro generates:
@@ -27,7 +29,7 @@
 /// Parameters with default values become optional in the schema.
 /// The doc comment becomes the tool description.
 @attached(peer, names: prefixed(_GeneratedTool_), overloaded)
-public macro Tool() = #externalMacro(module: "StrandsAgentsMacros", type: "ToolMacro")
+public macro Tool() = #externalMacro(module: "StrandsAgentsMacrosPlugin", type: "ToolMacro")
 
 /// Synthesizes `StructuredOutput` conformance for a struct.
 ///
@@ -58,4 +60,4 @@ public macro Tool() = #externalMacro(module: "StrandsAgentsMacros", type: "ToolM
 /// The attribute name `@StructuredOutput` coexists with the `StructuredOutput`
 /// protocol -- the same pattern SwiftData uses with `@Model`/`Model`.
 @attached(extension, conformances: StructuredOutput, names: named(jsonSchema))
-public macro StructuredOutput() = #externalMacro(module: "StrandsAgentsMacros", type: "StructuredOutputMacro")
+public macro StructuredOutput() = #externalMacro(module: "StrandsAgentsMacrosPlugin", type: "StructuredOutputMacro")

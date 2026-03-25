@@ -10,6 +10,7 @@ import StrandsAgents
 import StrandsAnthropicProvider
 import StrandsOpenAIProvider
 import StrandsGeminiProvider
+import StrandsAgentsToolMacros
 
 @Tool
 func calculator(expression: String) -> String {

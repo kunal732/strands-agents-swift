@@ -5,6 +5,7 @@
 import Foundation
 import StrandsAgents
 import StrandsBedrockProvider
+import StrandsAgentsToolMacros
 
 @Tool
 func calculator(expression: String) -> String {

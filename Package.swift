@@ -12,6 +12,7 @@ let package = Package(
     ],
     products: [
         .library(name: "StrandsAgents", targets: ["StrandsAgents"]),
+        .library(name: "StrandsAgentsToolMacros", targets: ["StrandsAgentsToolMacros"]),
         .library(name: "StrandsBedrockProvider", targets: ["StrandsBedrockProvider"]),
         .library(name: "StrandsMLXProvider", targets: ["StrandsMLXProvider"]),
         .library(name: "StrandsAnthropicProvider", targets: ["StrandsAnthropicProvider"]),
@@ -30,16 +31,22 @@ let package = Package(
         .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "600.0.0"),
     ],
     targets: [
-        // Core
+        // Core (no macro dependency -- no Xcode trust prompt)
         .target(
             name: "StrandsAgents",
-            dependencies: ["StrandsAgentsMacros"],
             path: "Sources/StrandsAgents"
+        ),
+
+        // Macro declarations (opt-in: adds @Tool and @StructuredOutput)
+        .target(
+            name: "StrandsAgentsToolMacros",
+            dependencies: ["StrandsAgents", "StrandsAgentsMacrosPlugin"],
+            path: "Sources/StrandsAgentsToolMacros"
         ),
 
         // Macro implementation (compiler plugin)
         .macro(
-            name: "StrandsAgentsMacros",
+            name: "StrandsAgentsMacrosPlugin",
             dependencies: [
                 .product(name: "SwiftSyntax", package: "swift-syntax"),
                 .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
@@ -145,7 +152,7 @@ let package = Package(
         ),
         .executableTarget(
             name: "PersonalAssistant",
-            dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
+            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents", "StrandsBedrockProvider"],
             path: "Examples/PersonalAssistant",
             exclude: ["Info.plist"]
         ),
@@ -159,27 +166,27 @@ let package = Package(
         // Samples
         .executableTarget(
             name: "Sample01-SimpleLocalAgent",
-            dependencies: ["StrandsAgents", "StrandsMLXProvider"],
+            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents", "StrandsMLXProvider"],
             path: "Samples/01-SimpleLocalAgent"
         ),
         .executableTarget(
             name: "Sample02-SimpleBedrockAgent",
-            dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
+            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents", "StrandsBedrockProvider"],
             path: "Samples/02-SimpleBedrockAgent"
         ),
         .executableTarget(
             name: "Sample03-HybridAgent",
-            dependencies: ["StrandsAgents", "StrandsMLXProvider", "StrandsBedrockProvider"],
+            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents", "StrandsMLXProvider", "StrandsBedrockProvider"],
             path: "Samples/03-HybridAgent"
         ),
         .executableTarget(
             name: "Sample04-NovaSonicBidi",
-            dependencies: ["StrandsAgents", "StrandsBidiStreaming"],
+            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents", "StrandsBidiStreaming"],
             path: "Samples/04-NovaSonicBidi"
         ),
         .executableTarget(
             name: "Sample05-MLXBidiLocal",
-            dependencies: ["StrandsAgents", "StrandsMLXBidiProvider"],
+            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents", "StrandsMLXBidiProvider"],
             path: "Samples/05-MLXBidiLocal"
         ),
         .executableTarget(
@@ -189,17 +196,17 @@ let package = Package(
         ),
         .executableTarget(
             name: "Sample07-MultiAgentSwarm",
-            dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
+            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents", "StrandsBedrockProvider"],
             path: "Samples/07-MultiAgentSwarm"
         ),
         .executableTarget(
             name: "Sample08-MultiProvider",
-            dependencies: ["StrandsAgents", "StrandsAnthropicProvider", "StrandsOpenAIProvider", "StrandsGeminiProvider"],
+            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents", "StrandsAnthropicProvider", "StrandsOpenAIProvider", "StrandsGeminiProvider"],
             path: "Samples/08-MultiProvider"
         ),
         .executableTarget(
             name: "Sample09-StructuredOutput",
-            dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
+            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents", "StrandsBedrockProvider"],
             path: "Samples/09-StructuredOutput"
         ),
         .executableTarget(
@@ -209,7 +216,7 @@ let package = Package(
         ),
         .executableTarget(
             name: "Sample11-DatadogObservability",
-            dependencies: ["StrandsAgents", "StrandsBedrockProvider", "StrandsOTelObservability"],
+            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents", "StrandsBedrockProvider", "StrandsOTelObservability"],
             path: "Samples/11-DatadogObservability"
         ),
         .executableTarget(
@@ -221,7 +228,7 @@ let package = Package(
         // Tests
         .testTarget(
             name: "StrandsAgentsTests",
-            dependencies: ["StrandsAgents"],
+            dependencies: ["StrandsAgents", "StrandsAgentsToolMacros"],
             path: "Tests/StrandsAgentsTests"
         ),
     ]

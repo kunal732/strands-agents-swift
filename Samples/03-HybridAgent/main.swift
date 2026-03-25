@@ -6,6 +6,7 @@ import Foundation
 import StrandsAgents
 import StrandsMLXProvider
 import StrandsBedrockProvider
+import StrandsAgentsToolMacros
 
 @Tool
 func getCurrentTime(timezone: String = "local") -> String {

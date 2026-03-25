@@ -6,6 +6,7 @@
 import Foundation
 import StrandsAgents
 import StrandsBedrockProvider
+import StrandsAgentsToolMacros
 
 let provider = try BedrockProvider(config: BedrockConfig(
     modelId: "us.anthropic.claude-sonnet-4-20250514-v1:0",

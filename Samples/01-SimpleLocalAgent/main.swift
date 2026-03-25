@@ -5,6 +5,7 @@
 import Foundation
 import StrandsAgents
 import StrandsMLXProvider
+import StrandsAgentsToolMacros
 
 @Tool
 func wordCount(text: String) -> Int {

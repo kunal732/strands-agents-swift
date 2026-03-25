@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import StrandsAgents
+import StrandsAgentsToolMacros
 
 @Test func jsonValueRoundTrips() throws {
     let value: JSONValue = [
