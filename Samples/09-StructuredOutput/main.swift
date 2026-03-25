@@ -4,7 +4,6 @@
 
 import Foundation
 import StrandsAgents
-import StrandsBedrockProvider
 import StrandsAgentsToolMacros
 
 @StructuredOutput

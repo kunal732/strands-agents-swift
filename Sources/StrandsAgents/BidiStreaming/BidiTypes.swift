@@ -1,5 +1,4 @@
 import Foundation
-import StrandsAgents
 
 // MARK: - Bidi Events
 

@@ -4,7 +4,6 @@
 
 import Foundation
 import StrandsAgents
-import StrandsMLXProvider
 import StrandsAgentsToolMacros
 
 @Tool

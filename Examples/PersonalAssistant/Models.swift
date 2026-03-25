@@ -1,6 +1,5 @@
 import SwiftUI
 import StrandsAgents
-import StrandsBedrockProvider
 import StrandsAgentsToolMacros
 
 // MARK: - Data types

@@ -6,8 +6,6 @@
 
 import Foundation
 import StrandsAgents
-import StrandsBedrockProvider
-import StrandsOTelObservability
 import StrandsAgentsToolMacros
 
 @Tool

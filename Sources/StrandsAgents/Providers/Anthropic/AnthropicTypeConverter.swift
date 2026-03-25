@@ -1,5 +1,4 @@
 import Foundation
-import StrandsAgents
 
 /// Converts between Strands types and Anthropic API JSON.
 enum AnthropicTypeConverter {

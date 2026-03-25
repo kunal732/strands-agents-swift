@@ -11,16 +11,11 @@ let package = Package(
         .tvOS(.v17),
     ],
     products: [
+        // Everything in one module: providers, observability, voice, local inference
         .library(name: "StrandsAgents", targets: ["StrandsAgents"]),
+
+        // Opt-in: @Tool and @StructuredOutput macros (triggers Xcode trust prompt)
         .library(name: "StrandsAgentsToolMacros", targets: ["StrandsAgentsToolMacros"]),
-        .library(name: "StrandsBedrockProvider", targets: ["StrandsBedrockProvider"]),
-        .library(name: "StrandsMLXProvider", targets: ["StrandsMLXProvider"]),
-        .library(name: "StrandsAnthropicProvider", targets: ["StrandsAnthropicProvider"]),
-        .library(name: "StrandsOpenAIProvider", targets: ["StrandsOpenAIProvider"]),
-        .library(name: "StrandsOTelObservability", targets: ["StrandsOTelObservability"]),
-        .library(name: "StrandsBidiStreaming", targets: ["StrandsBidiStreaming"]),
-        .library(name: "StrandsMLXBidiProvider", targets: ["StrandsMLXBidiProvider"]),
-        .library(name: "StrandsGeminiProvider", targets: ["StrandsGeminiProvider"]),
     ],
     dependencies: [
         .package(url: "https://github.com/awslabs/aws-sdk-swift.git", .upToNextMajor(from: "1.0.0")),
@@ -31,20 +26,32 @@ let package = Package(
         .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "600.0.0"),
     ],
     targets: [
-        // Core (no macro dependency -- no Xcode trust prompt)
+        // Single unified module
         .target(
             name: "StrandsAgents",
+            dependencies: [
+                .product(name: "AWSBedrockRuntime", package: "aws-sdk-swift"),
+                .product(name: "MLXLLM", package: "mlx-swift-lm"),
+                .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
+                .product(name: "OpenTelemetryApi", package: "opentelemetry-swift"),
+                .product(name: "OpenTelemetrySdk", package: "opentelemetry-swift"),
+                .product(name: "OpenTelemetryProtocolExporterHTTP", package: "opentelemetry-swift"),
+                .product(name: "MLX", package: "mlx-swift"),
+                .product(name: "MLXAudioSTT", package: "mlx-audio-swift"),
+                .product(name: "MLXAudioTTS", package: "mlx-audio-swift"),
+                .product(name: "MLXAudioVAD", package: "mlx-audio-swift"),
+            ],
             path: "Sources/StrandsAgents"
         ),
 
-        // Macro declarations (opt-in: adds @Tool and @StructuredOutput)
+        // Opt-in macro declarations
         .target(
             name: "StrandsAgentsToolMacros",
             dependencies: ["StrandsAgents", "StrandsAgentsMacrosPlugin"],
             path: "Sources/StrandsAgentsToolMacros"
         ),
 
-        // Macro implementation (compiler plugin)
+        // Macro compiler plugin
         .macro(
             name: "StrandsAgentsMacrosPlugin",
             dependencies: [
@@ -56,109 +63,37 @@ let package = Package(
             path: "Sources/StrandsAgentsMacros"
         ),
 
-        // Model Providers
-        .target(
-            name: "StrandsBedrockProvider",
-            dependencies: [
-                "StrandsAgents",
-                .product(name: "AWSBedrockRuntime", package: "aws-sdk-swift"),
-            ],
-            path: "Sources/StrandsBedrockProvider"
-        ),
-        .target(
-            name: "StrandsMLXProvider",
-            dependencies: [
-                "StrandsAgents",
-                .product(name: "MLXLLM", package: "mlx-swift-lm"),
-                .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
-            ],
-            path: "Sources/StrandsMLXProvider"
-        ),
-        .target(
-            name: "StrandsAnthropicProvider",
-            dependencies: ["StrandsAgents"],
-            path: "Sources/StrandsAnthropicProvider"
-        ),
-        .target(
-            name: "StrandsOpenAIProvider",
-            dependencies: ["StrandsAgents"],
-            path: "Sources/StrandsOpenAIProvider"
-        ),
-        .target(
-            name: "StrandsGeminiProvider",
-            dependencies: ["StrandsAgents"],
-            path: "Sources/StrandsGeminiProvider"
-        ),
-
-        // Observability
-        .target(
-            name: "StrandsOTelObservability",
-            dependencies: [
-                "StrandsAgents",
-                .product(name: "OpenTelemetryApi", package: "opentelemetry-swift"),
-                .product(name: "OpenTelemetrySdk", package: "opentelemetry-swift"),
-                .product(name: "OpenTelemetryProtocolExporterHTTP", package: "opentelemetry-swift"),
-            ],
-            path: "Sources/StrandsOTelObservability"
-        ),
-
-        // Bidi Streaming (core protocols + cloud models)
-        .target(
-            name: "StrandsBidiStreaming",
-            dependencies: [
-                "StrandsAgents",
-                .product(name: "AWSBedrockRuntime", package: "aws-sdk-swift"),
-            ],
-            path: "Sources/StrandsBidiStreaming"
-        ),
-
-        // Bidi MLX Provider (local STT + LLM + TTS pipeline)
-        .target(
-            name: "StrandsMLXBidiProvider",
-            dependencies: [
-                "StrandsAgents",
-                "StrandsBidiStreaming",
-                "StrandsMLXProvider",
-                .product(name: "MLX", package: "mlx-swift"),
-                .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
-                .product(name: "MLXAudioSTT", package: "mlx-audio-swift"),
-                .product(name: "MLXAudioTTS", package: "mlx-audio-swift"),
-                .product(name: "MLXAudioVAD", package: "mlx-audio-swift"),
-            ],
-            path: "Sources/StrandsMLXBidiProvider"
-        ),
-
-        // Examples (legacy)
+        // Examples
         .executableTarget(
             name: "LocalInferenceExample",
-            dependencies: ["StrandsAgents", "StrandsMLXProvider"],
+            dependencies: ["StrandsAgents"],
             path: "Examples/LocalInference"
         ),
         .executableTarget(
             name: "BedrockInferenceExample",
-            dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
+            dependencies: ["StrandsAgents"],
             path: "Examples/BedrockInference"
         ),
         .executableTarget(
             name: "MenuBarAgent",
-            dependencies: ["StrandsAgents", "StrandsMLXProvider", "StrandsBedrockProvider", "StrandsBidiStreaming"],
+            dependencies: ["StrandsAgents"],
             path: "Examples/MenuBarAgent"
         ),
         .executableTarget(
             name: "WritingAssistant",
-            dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
+            dependencies: ["StrandsAgents"],
             path: "Examples/WritingAssistant",
             exclude: ["Info.plist"]
         ),
         .executableTarget(
             name: "PersonalAssistant",
-            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents", "StrandsBedrockProvider"],
+            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents"],
             path: "Examples/PersonalAssistant",
             exclude: ["Info.plist"]
         ),
         .executableTarget(
             name: "DesktopAssistant",
-            dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
+            dependencies: ["StrandsAgents"],
             path: "Examples/DesktopAssistant",
             exclude: ["Info.plist"]
         ),
@@ -166,62 +101,62 @@ let package = Package(
         // Samples
         .executableTarget(
             name: "Sample01-SimpleLocalAgent",
-            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents", "StrandsMLXProvider"],
+            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents"],
             path: "Samples/01-SimpleLocalAgent"
         ),
         .executableTarget(
             name: "Sample02-SimpleBedrockAgent",
-            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents", "StrandsBedrockProvider"],
+            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents"],
             path: "Samples/02-SimpleBedrockAgent"
         ),
         .executableTarget(
             name: "Sample03-HybridAgent",
-            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents", "StrandsMLXProvider", "StrandsBedrockProvider"],
+            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents"],
             path: "Samples/03-HybridAgent"
         ),
         .executableTarget(
             name: "Sample04-NovaSonicBidi",
-            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents", "StrandsBidiStreaming"],
+            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents"],
             path: "Samples/04-NovaSonicBidi"
         ),
         .executableTarget(
             name: "Sample05-MLXBidiLocal",
-            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents", "StrandsMLXBidiProvider"],
+            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents"],
             path: "Samples/05-MLXBidiLocal"
         ),
         .executableTarget(
             name: "Sample06-MultiAgentGraph",
-            dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
+            dependencies: ["StrandsAgents"],
             path: "Samples/06-MultiAgentGraph"
         ),
         .executableTarget(
             name: "Sample07-MultiAgentSwarm",
-            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents", "StrandsBedrockProvider"],
+            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents"],
             path: "Samples/07-MultiAgentSwarm"
         ),
         .executableTarget(
             name: "Sample08-MultiProvider",
-            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents", "StrandsAnthropicProvider", "StrandsOpenAIProvider", "StrandsGeminiProvider"],
+            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents"],
             path: "Samples/08-MultiProvider"
         ),
         .executableTarget(
             name: "Sample09-StructuredOutput",
-            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents", "StrandsBedrockProvider"],
+            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents"],
             path: "Samples/09-StructuredOutput"
         ),
         .executableTarget(
             name: "Sample10-SessionPersistence",
-            dependencies: ["StrandsAgents", "StrandsBedrockProvider"],
+            dependencies: ["StrandsAgents"],
             path: "Samples/10-SessionPersistence"
         ),
         .executableTarget(
             name: "Sample11-DatadogObservability",
-            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents", "StrandsBedrockProvider", "StrandsOTelObservability"],
+            dependencies: ["StrandsAgentsToolMacros", "StrandsAgents"],
             path: "Samples/11-DatadogObservability"
         ),
         .executableTarget(
             name: "Sample12-MCPDesktopControl",
-            dependencies: ["StrandsAgents", "StrandsBedrockProvider", "StrandsMLXProvider"],
+            dependencies: ["StrandsAgents"],
             path: "Samples/12-MCPDesktopControl"
         ),
 

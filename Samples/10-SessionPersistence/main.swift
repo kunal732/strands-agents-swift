@@ -4,7 +4,6 @@
 
 import Foundation
 import StrandsAgents
-import StrandsBedrockProvider
 
 let sessionsDir = FileManager.default.temporaryDirectory.appendingPathComponent("strands-sessions")
 try FileManager.default.createDirectory(at: sessionsDir, withIntermediateDirectories: true)

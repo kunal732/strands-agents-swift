@@ -1,5 +1,4 @@
 import Foundation
-import StrandsAgents
 
 /// OpenAI Chat Completions API provider with streaming and tool calling.
 ///

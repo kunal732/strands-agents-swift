@@ -1,6 +1,5 @@
 import Foundation
 import StrandsAgents
-import StrandsMLXProvider
 
 // MARK: - Configuration
 

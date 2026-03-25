@@ -1,5 +1,4 @@
 import Foundation
-import StrandsAgents
 
 /// An agent that supports bidirectional streaming for real-time voice/text conversations.
 ///

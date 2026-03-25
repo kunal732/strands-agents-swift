@@ -1,5 +1,4 @@
 import Foundation
-import StrandsAgents
 import OpenTelemetryApi
 import OpenTelemetrySdk
 import OpenTelemetryProtocolExporterHttp

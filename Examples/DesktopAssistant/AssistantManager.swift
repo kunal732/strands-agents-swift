@@ -1,7 +1,6 @@
 import Foundation
 import AppKit
 import StrandsAgents
-import StrandsBedrockProvider
 
 private func log(_ msg: String) {
     let line = "[\(ISO8601DateFormatter().string(from: Date()))] \(msg)\n"

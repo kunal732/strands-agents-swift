@@ -1,8 +1,6 @@
 import Foundation
 import MLX
 import MLXAudioSTT
-import StrandsAgents
-import StrandsBidiStreaming
 
 /// Speech-to-text processor using MLX Audio STT models (GLMASR, Parakeet, Qwen3-ASR, etc.).
 ///

@@ -1,6 +1,4 @@
 import Foundation
-import StrandsAgents
-import StrandsBidiStreaming
 
 /// Convenience factory to create a fully local bidi agent with MLX models.
 ///

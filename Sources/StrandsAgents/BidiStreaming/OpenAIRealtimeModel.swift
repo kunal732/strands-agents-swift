@@ -1,5 +1,4 @@
 import Foundation
-import StrandsAgents
 
 /// OpenAI Realtime API bidi model via WebSocket.
 ///

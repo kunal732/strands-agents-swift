@@ -1,5 +1,4 @@
 import Foundation
-import StrandsAgents
 
 /// Google Gemini Live API bidi model via WebSocket.
 ///

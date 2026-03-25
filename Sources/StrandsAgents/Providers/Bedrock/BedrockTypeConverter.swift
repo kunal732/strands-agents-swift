@@ -1,5 +1,4 @@
 import Foundation
-import StrandsAgents
 import AWSBedrockRuntime
 import Smithy
 import SmithyJSON

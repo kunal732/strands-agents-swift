@@ -1,7 +1,5 @@
 import Foundation
 import StrandsAgents
-import StrandsMLXProvider
-import StrandsBedrockProvider
 import Speech
 import AVFoundation
 

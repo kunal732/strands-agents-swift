@@ -4,8 +4,6 @@
 
 import Foundation
 import StrandsAgents
-import StrandsMLXProvider
-import StrandsBedrockProvider
 import StrandsAgentsToolMacros
 
 @Tool

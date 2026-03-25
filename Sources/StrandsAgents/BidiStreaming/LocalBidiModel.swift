@@ -1,5 +1,4 @@
 import Foundation
-import StrandsAgents
 
 /// Fully local bidirectional model using MLX Audio + MLX LLM.
 ///

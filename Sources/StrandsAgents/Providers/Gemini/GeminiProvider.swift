@@ -1,5 +1,4 @@
 import Foundation
-import StrandsAgents
 
 /// Google Gemini API provider using the `generateContent` streaming endpoint.
 ///

@@ -1,5 +1,4 @@
 import Foundation
-import StrandsAgents
 import AWSBedrockRuntime
 
 /// AWS Nova Sonic bidi model via Bedrock's `InvokeModelWithBidirectionalStream` API.

@@ -1,5 +1,4 @@
 import Foundation
-import StrandsAgents
 
 /// Protocol for models that support bidirectional streaming.
 ///

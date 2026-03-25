@@ -20,20 +20,20 @@ dependencies: [
 ]
 ```
 
-Add the modules you need:
+Add the package to your target:
 
 ```swift
 .target(name: "MyApp", dependencies: [
     .product(name: "StrandsAgents", package: "strands-agents-swift"),
-    .product(name: "StrandsBedrockProvider", package: "strands-agents-swift"),
 ])
 ```
+
+That's it. All providers (Bedrock, MLX, Anthropic, OpenAI, Gemini), observability, and voice streaming are included in the single `StrandsAgents` module.
 
 ## Usage
 
 ```swift
 import StrandsAgents
-import StrandsBedrockProvider
 
 func wordCount(text: String) -> Int {
     text.split(whereSeparator: \.isWhitespace).count
@@ -75,8 +75,6 @@ for try await event in agent.stream("How many words are in the Declaration of In
 Run models on-device with Apple Silicon. Models download from HuggingFace and cache locally. No network or credentials required after download.
 
 ```swift
-import StrandsMLXProvider
-
 let agent = Agent(model: MLXProvider(modelId: "mlx-community/Qwen3-8B-4bit"))
 let result = try await agent.run("What is 42 * 17?")
 ```
@@ -99,13 +97,15 @@ let agent = Agent(
 
 ## Model Providers
 
-| Provider | Module | Auth |
-|----------|--------|------|
-| AWS Bedrock | `StrandsBedrockProvider` | Cognito / IAM credentials |
-| Anthropic | `StrandsAnthropicProvider` | `ANTHROPIC_API_KEY` |
-| OpenAI | `StrandsOpenAIProvider` | `OPENAI_API_KEY` |
-| Google Gemini | `StrandsGeminiProvider` | `GOOGLE_API_KEY` |
-| MLX (local) | `StrandsMLXProvider` | None |
+All providers ship in `StrandsAgents`. Import once, use any provider:
+
+| Provider | Auth |
+|----------|------|
+| AWS Bedrock | Cognito / IAM credentials |
+| Anthropic | `ANTHROPIC_API_KEY` |
+| OpenAI | `OPENAI_API_KEY` |
+| Google Gemini | `GOOGLE_API_KEY` |
+| MLX (local) | None |
 
 ## Tools
 
@@ -250,8 +250,6 @@ MLX inference requires no credentials or network.
 ## Observability
 
 ```swift
-import StrandsOTelObservability
-
 let agent = Agent(
     model: provider,
     observability: OTelObservabilityEngine(tracer: myTracer)
@@ -289,18 +287,12 @@ Per-message persistence with atomic writes, version tracking, and broken history
 
 ## Modules
 
-| Module | Description | Dependencies |
-|--------|-------------|-------------|
-| `StrandsAgents` | Core: agent, tools, hooks, multi-agent, session, MCP | Foundation |
-| `StrandsAgentsToolMacros` | Opt-in `@Tool` and `@StructuredOutput` macros | SwiftSyntax |
-| `StrandsBedrockProvider` | AWS Bedrock ConverseStream | aws-sdk-swift |
-| `StrandsMLXProvider` | On-device LLM inference | mlx-swift-lm |
-| `StrandsAnthropicProvider` | Anthropic Messages API | - |
-| `StrandsOpenAIProvider` | OpenAI Chat Completions | - |
-| `StrandsGeminiProvider` | Google Gemini API | - |
-| `StrandsOTelObservability` | OpenTelemetry tracing | opentelemetry-swift |
-| `StrandsBidiStreaming` | Voice agent protocols + cloud backends | aws-sdk-swift |
-| `StrandsMLXBidiProvider` | Local STT/TTS/VAD pipeline | mlx-audio-swift |
+| Module | Description |
+|--------|-------------|
+| `StrandsAgents` | Everything: agent, tools, all providers, observability, voice streaming |
+| `StrandsAgentsToolMacros` | Opt-in `@Tool` and `@StructuredOutput` macros (triggers Xcode trust prompt) |
+
+`StrandsAgents` includes Bedrock, MLX, Anthropic, OpenAI, and Gemini providers; OpenTelemetry observability; and bidirectional voice streaming -- all in one import. `StrandsAgentsToolMacros` is opt-in so users who only use `Tool()` never see the Xcode macro trust dialog.
 
 ## Platform Support
 

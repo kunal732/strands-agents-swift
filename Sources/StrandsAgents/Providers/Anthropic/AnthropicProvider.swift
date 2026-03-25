@@ -1,5 +1,4 @@
 import Foundation
-import StrandsAgents
 
 /// Anthropic API model provider using the Messages API directly.
 ///

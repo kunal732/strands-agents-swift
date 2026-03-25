@@ -6,8 +6,6 @@
 
 import Foundation
 import StrandsAgents
-import StrandsMLXBidiProvider
-import StrandsMLXProvider
 import MLXAudioSTT
 import MLXAudioTTS
 import StrandsAgentsToolMacros

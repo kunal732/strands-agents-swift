@@ -1,6 +1,5 @@
 import SwiftUI
 import StrandsAgents
-import StrandsBedrockProvider
 
 enum AgentStatus: Equatable { case idle, running, done }
 

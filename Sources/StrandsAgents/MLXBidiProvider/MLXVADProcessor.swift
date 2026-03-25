@@ -1,8 +1,6 @@
 import Foundation
 import MLX
 import MLXAudioVAD
-import StrandsAgents
-import StrandsBidiStreaming
 
 /// Voice activity detection using MLX Audio's Sortformer model.
 ///

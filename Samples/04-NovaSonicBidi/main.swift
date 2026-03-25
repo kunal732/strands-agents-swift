@@ -5,7 +5,6 @@
 
 import Foundation
 import StrandsAgents
-import StrandsBidiStreaming
 import StrandsAgentsToolMacros
 
 @Tool

@@ -1,5 +1,4 @@
 import Foundation
-import StrandsAgents
 import AWSBedrockRuntime
 
 /// Converts Bedrock ConverseStream events to Strands ModelStreamEvent.

@@ -1,8 +1,6 @@
 import Foundation
 import MLX
 import MLXAudioTTS
-import StrandsAgents
-import StrandsBidiStreaming
 
 /// Text-to-speech processor using MLX Audio TTS models (Soprano, Orpheus, Qwen3-TTS, etc.).
 ///

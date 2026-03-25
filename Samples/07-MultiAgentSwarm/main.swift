@@ -5,7 +5,6 @@
 
 import Foundation
 import StrandsAgents
-import StrandsBedrockProvider
 import StrandsAgentsToolMacros
 
 let provider = try BedrockProvider(config: BedrockConfig(
