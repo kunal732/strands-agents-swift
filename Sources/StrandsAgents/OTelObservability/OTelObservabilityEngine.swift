@@ -64,6 +64,8 @@ public final class OTelObservabilityEngine: StrandsAgents.ObservabilityEngine, @
         version: String = "1.0",
         site: String = "datadoghq.com",
         endpoint: URL? = nil,
+        userId: String? = nil,
+        extraResourceAttributes: [String: String] = [:],
         redactor: (any StrandsAgents.ContentRedactor)? = nil
     ) -> OTelObservabilityEngine {
         let endpoint = endpoint ?? URL(string: "https://otlp.\(site)/v1/traces")!
@@ -74,14 +76,17 @@ public final class OTelObservabilityEngine: StrandsAgents.ObservabilityEngine, @
             ]
         )
         let exporter = OtlpHttpTraceExporter(endpoint: endpoint, config: config)
+        var resourceAttrs: [String: AttributeValue] = [
+            ResourceAttributes.serviceName.rawValue: AttributeValue.string(service),
+            ResourceAttributes.serviceVersion.rawValue: AttributeValue.string(version),
+            "ml_app": AttributeValue.string(service),
+            "deployment.environment": AttributeValue.string("production"),
+        ]
+        if let userId { resourceAttrs["enduser.id"] = AttributeValue.string(userId) }
+        for (k, v) in extraResourceAttributes { resourceAttrs[k] = AttributeValue.string(v) }
         let provider = TracerProviderBuilder()
             .add(spanProcessor: BatchSpanProcessor(spanExporter: exporter))
-            .with(resource: Resource(attributes: [
-                ResourceAttributes.serviceName.rawValue: AttributeValue.string(service),
-                ResourceAttributes.serviceVersion.rawValue: AttributeValue.string(version),
-                "ml_app": AttributeValue.string(service),
-                "deployment.environment": AttributeValue.string("production"),
-            ]))
+            .with(resource: Resource(attributes: resourceAttrs))
             .build()
         OpenTelemetry.registerTracerProvider(tracerProvider: provider)
         let tracer = provider.get(instrumentationName: service, instrumentationVersion: version)
