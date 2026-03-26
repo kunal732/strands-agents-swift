@@ -358,8 +358,8 @@ struct AgentLoop: Sendable {
             GenAIAttributes.system: provider.genAISystem,
             GenAIAttributes.requestModel: provider.modelId ?? "unknown",
             GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
-            // gen_ai.prompt as span attribute -- Python Strands SDK format
-            "gen_ai.prompt": buildPromptAttribute(systemPrompt: systemPrompt, messages: normalizedMessages),
+            // OTel GenAI 1.37+ input messages
+            "gen_ai.input.messages": buildInputMessages(systemPrompt: systemPrompt, messages: normalizedMessages),
         ]
         chatAttrs.merge(provider.requestParams) { _, new in new }
 
@@ -385,10 +385,11 @@ struct AgentLoop: Sendable {
                     onTextDelta: { _ in ttftTracker.mark() }
                 )
             }
-            // gen_ai.completion as span attribute -- Python Strands SDK format: [{"text":"..."}]
+            // OTel GenAI 1.37+ output messages
             let completionText = aggregated.message.textContent
             if !completionText.isEmpty {
-                observability.setAttribute(modelSpan, key: "gen_ai.completion", value: jsonContent(completionText))
+                observability.setAttribute(modelSpan, key: "gen_ai.output.messages",
+                    value: buildOutputMessages(text: completionText, finishReason: aggregated.stopReason.rawValue))
             }
             // gen_ai.choice event carries usage
             if let u = aggregated.usage {
@@ -442,8 +443,8 @@ struct AgentLoop: Sendable {
             GenAIAttributes.system: provider.genAISystem,
             GenAIAttributes.requestModel: provider.modelId ?? "unknown",
             GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
-            // gen_ai.prompt as span attribute -- Python Strands SDK format
-            "gen_ai.prompt": buildPromptAttribute(systemPrompt: systemPrompt, messages: normalizedMessages),
+            // OTel GenAI 1.37+ input messages
+            "gen_ai.input.messages": buildInputMessages(systemPrompt: systemPrompt, messages: normalizedMessages),
         ]
         chatAttrs.merge(provider.requestParams) { _, new in new }
 
@@ -516,21 +517,34 @@ struct AgentLoop: Sendable {
         return str
     }
 
-    /// Build gen_ai.prompt span attribute matching Python Strands SDK format:
-    /// [{"role":"user","content":[{"text":"..."}]}, ...]
-    private func buildPromptAttribute(systemPrompt: String?, messages: [Message]) -> String {
+    /// Build gen_ai.input.messages span attribute per OTel GenAI 1.37+ conventions:
+    /// [{"role":"user","parts":[{"type":"text","content":"..."}]}, ...]
+    private func buildInputMessages(systemPrompt: String?, messages: [Message]) -> String {
         var msgArray: [[String: Any]] = []
         if let sys = systemPrompt, !sys.isEmpty {
-            msgArray.append(["role": "system", "content": [["text": sys]]])
+            msgArray.append(["role": "system", "parts": [["type": "text", "content": sys]]])
         }
         for msg in messages {
             let role = msg.role == .user ? "user" : "assistant"
             let text = msg.textContent
             if !text.isEmpty {
-                msgArray.append(["role": role, "content": [["text": text]]])
+                msgArray.append(["role": role, "parts": [["type": "text", "content": text]]])
             }
         }
         guard let data = try? JSONSerialization.data(withJSONObject: msgArray),
+              let str = String(data: data, encoding: .utf8) else { return "[]" }
+        return str
+    }
+
+    /// Build gen_ai.output.messages span attribute per OTel GenAI 1.37+ conventions:
+    /// [{"role":"assistant","parts":[{"type":"text","content":"..."}],"finish_reason":"..."}]
+    private func buildOutputMessages(text: String, finishReason: String) -> String {
+        let obj: [[String: Any]] = [[
+            "role": "assistant",
+            "parts": [["type": "text", "content": text]],
+            "finish_reason": finishReason,
+        ]]
+        guard let data = try? JSONSerialization.data(withJSONObject: obj),
               let str = String(data: data, encoding: .utf8) else { return "[]" }
         return str
     }
