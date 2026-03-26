@@ -80,6 +80,13 @@ public final class GraphOrchestrator: @unchecked Sendable {
 
     /// Execute the graph with the given input.
     public func run(_ input: String) async throws -> MultiAgentResult {
+        let observability = nodes.values.first?.agent.observability ?? NoOpObservabilityEngine()
+        let rootSpan = observability.startSpan(name: "invoke_graph", attributes: [
+            GenAIAttributes.operationName: "invoke_graph",
+            GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
+        ])
+        defer { observability.endSpan(rootSpan, status: .ok) }
+
         var nodeResults: [String: AgentResult] = [:]
         var executionOrder: [String] = []
         var totalUsage = Usage()

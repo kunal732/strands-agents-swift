@@ -1,20 +1,24 @@
 import Foundation
 
+/// OTel span kind for the `startSpan` / `startChildSpan` calls.
+public enum SpanKind: Sendable {
+    case client    // External call (LLM API)
+    case server    // Inbound request
+    case producer  // Message publishing
+    case consumer  // Message consuming
+    case `internal` // In-process work (default)
+}
+
 /// Abstract interface for agent observability and tracing.
 ///
 /// All agent loop iterations, model calls, tool calls, and routing decisions
 /// are instrumented through this interface.
 public protocol ObservabilityEngine: Sendable {
     /// Start a new root span.
-    func startSpan(name: String, attributes: [String: String]) -> SpanContext
+    func startSpan(name: String, attributes: [String: String], spanKind: SpanKind) -> SpanContext
 
     /// Start a child span nested under a parent span.
-    ///
-    /// Implementations that support trace hierarchies (e.g. OTel) should
-    /// link the new span to the parent so the full trace tree is visible in
-    /// Datadog and other backends. The default implementation falls back to
-    /// `startSpan`, which produces a root span (no hierarchy).
-    func startChildSpan(name: String, attributes: [String: String], parentId: String) -> SpanContext
+    func startChildSpan(name: String, attributes: [String: String], parentId: String, spanKind: SpanKind) -> SpanContext
 
     /// End a span.
     func endSpan(_ context: SpanContext, status: SpanStatus)
@@ -27,10 +31,16 @@ public protocol ObservabilityEngine: Sendable {
 }
 
 extension ObservabilityEngine {
-    /// Default: ignore the parent and start a root span.
-    /// Override in concrete engines to produce proper trace hierarchies.
+    public func startSpan(name: String, attributes: [String: String]) -> SpanContext {
+        startSpan(name: name, attributes: attributes, spanKind: .internal)
+    }
+
     public func startChildSpan(name: String, attributes: [String: String], parentId: String) -> SpanContext {
-        startSpan(name: name, attributes: attributes)
+        startChildSpan(name: name, attributes: attributes, parentId: parentId, spanKind: .internal)
+    }
+
+    public func startChildSpan(name: String, attributes: [String: String], parentId: String, spanKind: SpanKind) -> SpanContext {
+        startSpan(name: name, attributes: attributes, spanKind: spanKind)
     }
 }
 
@@ -64,7 +74,11 @@ public protocol ContentRedactor: Sendable {
 public struct NoOpObservabilityEngine: ObservabilityEngine {
     public init() {}
 
-    public func startSpan(name: String, attributes: [String: String]) -> SpanContext {
+    public func startSpan(name: String, attributes: [String: String], spanKind: SpanKind) -> SpanContext {
+        SpanContext()
+    }
+
+    public func startChildSpan(name: String, attributes: [String: String], parentId: String, spanKind: SpanKind) -> SpanContext {
         SpanContext()
     }
 

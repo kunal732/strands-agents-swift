@@ -4,9 +4,15 @@ import Foundation
 public struct PrintObservabilityEngine: ObservabilityEngine {
     public init() {}
 
-    public func startSpan(name: String, attributes: [String: String]) -> SpanContext {
+    public func startSpan(name: String, attributes: [String: String], spanKind: SpanKind = .internal) -> SpanContext {
         let ctx = SpanContext()
-        print("[SPAN START] \(name) id=\(ctx.id.prefix(8)) \(formatAttributes(attributes))")
+        print("[SPAN START] \(name) kind=\(spanKind) id=\(ctx.id.prefix(8)) \(formatAttributes(attributes))")
+        return ctx
+    }
+
+    public func startChildSpan(name: String, attributes: [String: String], parentId: String, spanKind: SpanKind = .internal) -> SpanContext {
+        let ctx = SpanContext()
+        print("[SPAN START] \(name) kind=\(spanKind) id=\(ctx.id.prefix(8)) parent=\(parentId.prefix(8)) \(formatAttributes(attributes))")
         return ctx
     }
 

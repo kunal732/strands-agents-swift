@@ -340,6 +340,7 @@ struct AgentLoop: Sendable {
         let cycleSpan = observability.startChildSpan(
             name: GenAISpanNames.eventLoopCycle,
             attributes: [
+                GenAIAttributes.operationName: GenAISpanNames.eventLoopCycle,
                 GenAIAttributes.eventLoopCycleId: "\(cycleCount)",
                 GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
             ],
@@ -352,15 +353,19 @@ struct AgentLoop: Sendable {
 
         try await hookRegistry.invoke(BeforeModelCallEvent(messages: normalizedMessages, toolSpecs: toolSpecs))
 
+        var chatAttrs: [String: String] = [
+            GenAIAttributes.operationName: "chat",
+            GenAIAttributes.system: provider.genAISystem,
+            GenAIAttributes.requestModel: provider.modelId ?? "unknown",
+            GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
+        ]
+        chatAttrs.merge(provider.requestParams) { _, new in new }
+
         let modelSpan = observability.startChildSpan(
             name: GenAISpanNames.chat,
-            attributes: [
-                GenAIAttributes.operationName: "chat",
-                GenAIAttributes.system: provider.genAISystem,
-                GenAIAttributes.requestModel: provider.modelId ?? "unknown",
-                GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
-            ],
-            parentId: cycleSpan.id
+            attributes: chatAttrs,
+            parentId: cycleSpan.id,
+            spanKind: .client
         )
 
         // Record the input messages (prompt) as events for Datadog LLM Obs
@@ -398,15 +403,13 @@ struct AgentLoop: Sendable {
                 observability.recordEvent(name: GenAIEventNames.assistantMessage,
                     attributes: ["content": completionText], spanContext: modelSpan)
             }
-            // Record gen_ai usage attributes on the model span
+            // Record gen_ai usage + response attributes
             if let u = aggregated.usage {
                 observability.recordEvent(name: GenAIEventNames.choice, attributes: [
                     GenAIAttributes.usageInputTokens: "\(u.inputTokens)",
                     GenAIAttributes.usageOutputTokens: "\(u.outputTokens)",
                     GenAIAttributes.usageTotalTokens: "\(u.totalTokens)",
-                    GenAIAttributes.usagePromptTokens: "\(u.inputTokens)",
-                    GenAIAttributes.usageCompletionTokens: "\(u.outputTokens)",
-                    "finish_reason": aggregated.stopReason.rawValue,
+                    GenAIAttributes.responseFinishReasons: aggregated.stopReason.rawValue,
                 ], spanContext: modelSpan)
             }
             observability.endSpan(modelSpan, status: .ok)
@@ -434,6 +437,7 @@ struct AgentLoop: Sendable {
         let cycleSpan = observability.startChildSpan(
             name: GenAISpanNames.eventLoopCycle,
             attributes: [
+                GenAIAttributes.operationName: GenAISpanNames.eventLoopCycle,
                 GenAIAttributes.eventLoopCycleId: "\(cycleCount)",
                 GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
             ],
@@ -446,15 +450,34 @@ struct AgentLoop: Sendable {
 
         try await hookRegistry.invoke(BeforeModelCallEvent(messages: normalizedMessages, toolSpecs: toolSpecs))
 
+        var chatAttrs: [String: String] = [
+            GenAIAttributes.operationName: "chat",
+            GenAIAttributes.system: provider.genAISystem,
+            GenAIAttributes.requestModel: provider.modelId ?? "unknown",
+            GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
+        ]
+        chatAttrs.merge(provider.requestParams) { _, new in new }
+
         let modelSpan = observability.startChildSpan(
             name: GenAISpanNames.chat,
-            attributes: [
-                GenAIAttributes.operationName: "chat",
-                GenAIAttributes.requestModel: provider.modelId ?? "unknown",
-                GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
-            ],
-            parentId: cycleSpan.id
+            attributes: chatAttrs,
+            parentId: cycleSpan.id,
+            spanKind: .client
         )
+
+        // Record the input messages (prompt) as events for Datadog LLM Obs
+        if let systemPrompt, !systemPrompt.isEmpty {
+            observability.recordEvent(name: "gen_ai.system.message",
+                attributes: ["content": systemPrompt], spanContext: modelSpan)
+        }
+        for message in normalizedMessages {
+            let role = message.role == .user ? "user" : "assistant"
+            let content = message.textContent
+            if !content.isEmpty {
+                observability.recordEvent(name: "gen_ai.\(role).message",
+                    attributes: ["content": content], spanContext: modelSpan)
+            }
+        }
 
         let modelStart = Date()
         let ttftTracker = TTFTTracker()
@@ -475,15 +498,19 @@ struct AgentLoop: Sendable {
                     }
                 )
             }
-            // Record gen_ai usage attributes on the model span
+            // Record completion event
+            let completionText = aggregated.message.textContent
+            if !completionText.isEmpty {
+                observability.recordEvent(name: GenAIEventNames.assistantMessage,
+                    attributes: ["content": completionText], spanContext: modelSpan)
+            }
+            // Record gen_ai usage + response attributes
             if let u = aggregated.usage {
                 observability.recordEvent(name: GenAIEventNames.choice, attributes: [
                     GenAIAttributes.usageInputTokens: "\(u.inputTokens)",
                     GenAIAttributes.usageOutputTokens: "\(u.outputTokens)",
                     GenAIAttributes.usageTotalTokens: "\(u.totalTokens)",
-                    GenAIAttributes.usagePromptTokens: "\(u.inputTokens)",
-                    GenAIAttributes.usageCompletionTokens: "\(u.outputTokens)",
-                    "finish_reason": aggregated.stopReason.rawValue,
+                    GenAIAttributes.responseFinishReasons: aggregated.stopReason.rawValue,
                 ], spanContext: modelSpan)
             }
             observability.endSpan(modelSpan, status: .ok)
@@ -579,9 +606,15 @@ struct AgentLoop: Sendable {
         try await hookRegistry.invoke(BeforeToolCallEvent(toolUse: toolUse))
 
         // Record tool input as gen_ai event
+        let toolInputStr: String = {
+            if let v = toolUse.input.foundationValue,
+               let d = try? JSONSerialization.data(withJSONObject: v),
+               let s = String(data: d, encoding: .utf8) { return s }
+            return "{}"
+        }()
         observability.recordEvent(
             name: GenAIEventNames.toolMessage,
-            attributes: ["role": "tool", "id": toolUse.toolUseId],
+            attributes: ["role": "tool", "id": toolUse.toolUseId, "input": toolInputStr],
             spanContext: toolSpan
         )
 
@@ -590,9 +623,13 @@ struct AgentLoop: Sendable {
             let context = ToolContext(toolUse: toolUse, messages: messages, systemPrompt: systemPrompt, agentState: agentState)
             do {
                 result = try await tool.call(toolUse: toolUse, context: context)
+                let outputStr = result.content.compactMap { (block: ToolResultContent) -> String? in
+                    if case .text(let t) = block { return t }
+                    return nil
+                }.joined(separator: " ")
                 observability.recordEvent(
                     name: GenAIEventNames.choice,
-                    attributes: [GenAIAttributes.toolStatus: "success", "id": toolUse.toolUseId],
+                    attributes: [GenAIAttributes.toolStatus: "success", "id": toolUse.toolUseId, "output": outputStr],
                     spanContext: toolSpan
                 )
                 observability.endSpan(toolSpan, status: .ok)

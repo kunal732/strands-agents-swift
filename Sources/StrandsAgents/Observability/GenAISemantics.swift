@@ -16,6 +16,14 @@ public enum GenAIAttributes {
     public static let requestModel = "gen_ai.request.model"
     public static let operationName = "gen_ai.operation.name"
     public static let system = "gen_ai.system"
+    public static let requestMaxTokens = "gen_ai.request.max_tokens"
+    public static let requestTemperature = "gen_ai.request.temperature"
+    public static let requestTopP = "gen_ai.request.top_p"
+    public static let requestStopSequences = "gen_ai.request.stop_sequences"
+
+    // MARK: - Response
+    public static let responseModel = "gen_ai.response.model"
+    public static let responseFinishReasons = "gen_ai.response.finish_reasons"
 
     // MARK: - Usage
     public static let usageInputTokens = "gen_ai.usage.input_tokens"

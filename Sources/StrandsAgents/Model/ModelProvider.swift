@@ -19,6 +19,9 @@ public protocol ModelProvider: Sendable {
     /// The OTel GenAI system identifier for this provider (e.g. "aws.bedrock", "anthropic", "openai").
     var genAISystem: String { get }
 
+    /// Request parameters for OTel instrumentation (temperature, maxTokens, topP, etc.).
+    var requestParams: [String: String] { get }
+
     /// Stream a conversation with the model.
     ///
     /// - Parameters:
@@ -54,6 +57,8 @@ public protocol ConfigurableModelProvider: ModelProvider {
 extension ModelProvider {
     /// Default GenAI system -- providers override this with their specific value.
     public var genAISystem: String { "unknown" }
+    /// Default: no request params exposed.
+    public var requestParams: [String: String] { [:] }
 }
 
 extension ModelProvider {

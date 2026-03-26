@@ -63,6 +63,13 @@ public final class SwarmOrchestrator: @unchecked Sendable {
 
     /// Execute the swarm with the given input.
     public func run(_ input: String) async throws -> MultiAgentResult {
+        let observability = members.values.first?.agent.observability ?? NoOpObservabilityEngine()
+        let rootSpan = observability.startSpan(name: "invoke_swarm", attributes: [
+            GenAIAttributes.operationName: "invoke_swarm",
+            GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
+        ])
+        defer { observability.endSpan(rootSpan, status: .ok) }
+
         var nodeResults: [String: AgentResult] = [:]
         var executionOrder: [String] = []
         var totalUsage = Usage()

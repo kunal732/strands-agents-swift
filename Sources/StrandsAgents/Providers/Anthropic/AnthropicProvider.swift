@@ -14,6 +14,12 @@ import Foundation
 public final class AnthropicProvider: ModelProvider, @unchecked Sendable {
     public var modelId: String? { config.modelId }
     public var genAISystem: String { "anthropic" }
+    public var requestParams: [String: String] {
+        var p: [String: String] = ["gen_ai.request.max_tokens": "\(config.maxTokens)"]
+        if let t = config.temperature { p["gen_ai.request.temperature"] = "\(t)" }
+        if let tp = config.topP { p["gen_ai.request.top_p"] = "\(tp)" }
+        return p
+    }
 
     private var config: AnthropicConfig
     private let session: URLSession
