@@ -358,6 +358,8 @@ struct AgentLoop: Sendable {
             GenAIAttributes.system: provider.genAISystem,
             GenAIAttributes.requestModel: provider.modelId ?? "unknown",
             GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
+            // gen_ai.prompt as span attribute -- Python Strands SDK format
+            "gen_ai.prompt": buildPromptAttribute(systemPrompt: systemPrompt, messages: normalizedMessages),
         ]
         chatAttrs.merge(provider.requestParams) { _, new in new }
 
@@ -367,20 +369,6 @@ struct AgentLoop: Sendable {
             parentId: cycleSpan.id,
             spanKind: .client
         )
-
-        // Record input messages as events -- Python SDK format: content is JSON array [{"text":"..."}]
-        if let systemPrompt, !systemPrompt.isEmpty {
-            observability.recordEvent(name: "gen_ai.system.message",
-                attributes: ["content": jsonContent(systemPrompt)], spanContext: modelSpan)
-        }
-        for message in normalizedMessages {
-            let role = message.role == .user ? "user" : "assistant"
-            let content = message.textContent
-            if !content.isEmpty {
-                observability.recordEvent(name: "gen_ai.\(role).message",
-                    attributes: ["content": jsonContent(content)], spanContext: modelSpan)
-            }
-        }
 
         let modelStart = Date()
         let ttftTracker = TTFTTracker()
@@ -397,20 +385,20 @@ struct AgentLoop: Sendable {
                     onTextDelta: { _ in ttftTracker.mark() }
                 )
             }
-            // gen_ai.choice carries completion + usage -- Python SDK format
+            // gen_ai.completion as span attribute -- Python Strands SDK format: [{"text":"..."}]
             let completionText = aggregated.message.textContent
-            var choiceAttrs: [String: String] = [
-                "finish_reason": aggregated.stopReason.rawValue,
-            ]
             if !completionText.isEmpty {
-                choiceAttrs["message"] = jsonContent(completionText)
+                observability.setAttribute(modelSpan, key: "gen_ai.completion", value: jsonContent(completionText))
             }
+            // gen_ai.choice event carries usage
             if let u = aggregated.usage {
-                choiceAttrs[GenAIAttributes.usageInputTokens] = "\(u.inputTokens)"
-                choiceAttrs[GenAIAttributes.usageOutputTokens] = "\(u.outputTokens)"
-                choiceAttrs[GenAIAttributes.usageTotalTokens] = "\(u.totalTokens)"
+                observability.recordEvent(name: GenAIEventNames.choice, attributes: [
+                    "finish_reason": aggregated.stopReason.rawValue,
+                    GenAIAttributes.usageInputTokens: "\(u.inputTokens)",
+                    GenAIAttributes.usageOutputTokens: "\(u.outputTokens)",
+                    GenAIAttributes.usageTotalTokens: "\(u.totalTokens)",
+                ], spanContext: modelSpan)
             }
-            observability.recordEvent(name: GenAIEventNames.choice, attributes: choiceAttrs, spanContext: modelSpan)
             observability.endSpan(modelSpan, status: .ok)
         } catch {
             observability.endSpan(modelSpan, status: .error(error.localizedDescription))
@@ -454,6 +442,8 @@ struct AgentLoop: Sendable {
             GenAIAttributes.system: provider.genAISystem,
             GenAIAttributes.requestModel: provider.modelId ?? "unknown",
             GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
+            // gen_ai.prompt as span attribute -- Python Strands SDK format
+            "gen_ai.prompt": buildPromptAttribute(systemPrompt: systemPrompt, messages: normalizedMessages),
         ]
         chatAttrs.merge(provider.requestParams) { _, new in new }
 
@@ -463,20 +453,6 @@ struct AgentLoop: Sendable {
             parentId: cycleSpan.id,
             spanKind: .client
         )
-
-        // Record the input messages (prompt) as events for Datadog LLM Obs
-        if let systemPrompt, !systemPrompt.isEmpty {
-            observability.recordEvent(name: "gen_ai.system.message",
-                attributes: ["content": jsonContent(systemPrompt)], spanContext: modelSpan)
-        }
-        for message in normalizedMessages {
-            let role = message.role == .user ? "user" : "assistant"
-            let content = message.textContent
-            if !content.isEmpty {
-                observability.recordEvent(name: "gen_ai.\(role).message",
-                    attributes: ["content": jsonContent(content)], spanContext: modelSpan)
-            }
-        }
 
         let modelStart = Date()
         let ttftTracker = TTFTTracker()
@@ -497,20 +473,20 @@ struct AgentLoop: Sendable {
                     }
                 )
             }
-            // gen_ai.choice carries completion + usage -- Python SDK format
+            // gen_ai.completion as span attribute -- Python Strands SDK format
             let completionText = aggregated.message.textContent
-            var choiceAttrs: [String: String] = [
-                "finish_reason": aggregated.stopReason.rawValue,
-            ]
             if !completionText.isEmpty {
-                choiceAttrs["message"] = jsonContent(completionText)
+                observability.setAttribute(modelSpan, key: "gen_ai.completion", value: jsonContent(completionText))
             }
+            // gen_ai.choice event carries usage
             if let u = aggregated.usage {
-                choiceAttrs[GenAIAttributes.usageInputTokens] = "\(u.inputTokens)"
-                choiceAttrs[GenAIAttributes.usageOutputTokens] = "\(u.outputTokens)"
-                choiceAttrs[GenAIAttributes.usageTotalTokens] = "\(u.totalTokens)"
+                observability.recordEvent(name: GenAIEventNames.choice, attributes: [
+                    "finish_reason": aggregated.stopReason.rawValue,
+                    GenAIAttributes.usageInputTokens: "\(u.inputTokens)",
+                    GenAIAttributes.usageOutputTokens: "\(u.outputTokens)",
+                    GenAIAttributes.usageTotalTokens: "\(u.totalTokens)",
+                ], spanContext: modelSpan)
             }
-            observability.recordEvent(name: GenAIEventNames.choice, attributes: choiceAttrs, spanContext: modelSpan)
             observability.endSpan(modelSpan, status: .ok)
         } catch {
             observability.endSpan(modelSpan, status: .error(error.localizedDescription))
@@ -537,6 +513,25 @@ struct AgentLoop: Sendable {
               let str = String(data: data, encoding: .utf8) else {
             return "[{\"text\":\"\(text)\"}]"
         }
+        return str
+    }
+
+    /// Build gen_ai.prompt span attribute matching Python Strands SDK format:
+    /// [{"role":"user","content":[{"text":"..."}]}, ...]
+    private func buildPromptAttribute(systemPrompt: String?, messages: [Message]) -> String {
+        var msgArray: [[String: Any]] = []
+        if let sys = systemPrompt, !sys.isEmpty {
+            msgArray.append(["role": "system", "content": [["text": sys]]])
+        }
+        for msg in messages {
+            let role = msg.role == .user ? "user" : "assistant"
+            let text = msg.textContent
+            if !text.isEmpty {
+                msgArray.append(["role": role, "content": [["text": text]]])
+            }
+        }
+        guard let data = try? JSONSerialization.data(withJSONObject: msgArray),
+              let str = String(data: data, encoding: .utf8) else { return "[]" }
         return str
     }
 

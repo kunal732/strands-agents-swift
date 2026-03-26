@@ -149,6 +149,11 @@ public final class OTelObservabilityEngine: StrandsAgents.ObservabilityEngine, @
         return ctx
     }
 
+    public func setAttribute(_ context: StrandsAgents.SpanContext, key: String, value: String) {
+        let span = lock.withLock { activeSpans[context.id] }
+        span?.setAttribute(key: key, value: value)
+    }
+
     public func endSpan(
         _ context: StrandsAgents.SpanContext,
         status: StrandsAgents.SpanStatus

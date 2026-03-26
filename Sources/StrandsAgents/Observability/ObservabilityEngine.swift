@@ -28,6 +28,9 @@ public protocol ObservabilityEngine: Sendable {
 
     /// Record a metric value.
     func recordMetric(name: String, value: Double, unit: String?, attributes: [String: String])
+
+    /// Set an attribute on an active span (used to add completion after model responds).
+    func setAttribute(_ context: SpanContext, key: String, value: String)
 }
 
 extension ObservabilityEngine {
@@ -37,6 +40,10 @@ extension ObservabilityEngine {
 
     public func startChildSpan(name: String, attributes: [String: String], parentId: String) -> SpanContext {
         startChildSpan(name: name, attributes: attributes, parentId: parentId, spanKind: .internal)
+    }
+
+    public func setAttribute(_ context: SpanContext, key: String, value: String) {
+        // default no-op
     }
 
     public func startChildSpan(name: String, attributes: [String: String], parentId: String, spanKind: SpanKind) -> SpanContext {
