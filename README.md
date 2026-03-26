@@ -97,15 +97,14 @@ let agent = Agent(
 
 ## Model Providers
 
-All providers ship in `StrandsAgents`. Import once, use any provider:
+Two providers ship in `StrandsAgents`, both safe to use in shipped apps:
 
-| Provider | Auth |
-|----------|------|
-| AWS Bedrock | Cognito / IAM credentials |
-| Anthropic | `ANTHROPIC_API_KEY` |
-| OpenAI | `OPENAI_API_KEY` |
-| Google Gemini | `GOOGLE_API_KEY` |
-| MLX (local) | None |
+| Provider | Auth | Where runs |
+|----------|------|------------|
+| AWS Bedrock | Cognito / IAM (temporary, scoped) | Cloud |
+| MLX | None | On-device (Apple Silicon) |
+
+Bedrock uses temporary credentials issued by Cognito -- no permanent secret is embedded in the binary. MLX runs entirely on-device with no credentials at all. Providers that require embedding permanent API keys (Anthropic, OpenAI, Gemini) are intentionally not included.
 
 ## Tools
 

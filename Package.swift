@@ -111,11 +111,6 @@ let package = Package(
             path: "Samples/07-MultiAgentSwarm"
         ),
         .executableTarget(
-            name: "Sample08-MultiProvider",
-            dependencies: ["StrandsAgents"],
-            path: "Samples/08-MultiProvider"
-        ),
-        .executableTarget(
             name: "Sample09-StructuredOutput",
             dependencies: ["StrandsAgents"],
             path: "Samples/09-StructuredOutput"
