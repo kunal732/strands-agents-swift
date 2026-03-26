@@ -11,6 +11,7 @@ import Foundation
 /// If no API key is provided, reads from the `GOOGLE_API_KEY` environment variable.
 public final class GeminiProvider: ModelProvider, @unchecked Sendable {
     public var modelId: String? { config.modelId }
+    public var genAISystem: String { "google_ai_studio" }
 
     private var config: GeminiConfig
     private let session: URLSession

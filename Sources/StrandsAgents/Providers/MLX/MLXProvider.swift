@@ -17,6 +17,7 @@ import MLXLLM
 /// - Note: MLX inference is only available on macOS with Apple Silicon.
 public final class MLXProvider: ModelProvider, @unchecked Sendable {
     public var modelId: String? { config.modelId }
+    public var genAISystem: String { "mlx" }
 
     private let config: MLXConfig
     private let loader: MLXModelLoader

@@ -13,6 +13,7 @@ import Smithy
 /// ```
 public final class BedrockProvider: ModelProvider, @unchecked Sendable {
     public var modelId: String? { config.modelId }
+    public var genAISystem: String { "aws.bedrock" }
 
     private var config: BedrockConfig
     private let client: BedrockRuntimeClient

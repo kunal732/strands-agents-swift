@@ -13,6 +13,7 @@ import Foundation
 /// If no API key is provided, reads from the `ANTHROPIC_API_KEY` environment variable.
 public final class AnthropicProvider: ModelProvider, @unchecked Sendable {
     public var modelId: String? { config.modelId }
+    public var genAISystem: String { "anthropic" }
 
     private var config: AnthropicConfig
     private let session: URLSession

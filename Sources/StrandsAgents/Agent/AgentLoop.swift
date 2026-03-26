@@ -356,11 +356,26 @@ struct AgentLoop: Sendable {
             name: GenAISpanNames.chat,
             attributes: [
                 GenAIAttributes.operationName: "chat",
+                GenAIAttributes.system: provider.genAISystem,
                 GenAIAttributes.requestModel: provider.modelId ?? "unknown",
                 GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
             ],
             parentId: cycleSpan.id
         )
+
+        // Record the input messages (prompt) as events for Datadog LLM Obs
+        if let systemPrompt, !systemPrompt.isEmpty {
+            observability.recordEvent(name: "gen_ai.system.message",
+                attributes: ["content": systemPrompt], spanContext: modelSpan)
+        }
+        for message in normalizedMessages {
+            let role = message.role == .user ? "user" : "assistant"
+            let content = message.textContent
+            if !content.isEmpty {
+                observability.recordEvent(name: "gen_ai.\(role).message",
+                    attributes: ["content": content], spanContext: modelSpan)
+            }
+        }
 
         let modelStart = Date()
         let ttftTracker = TTFTTracker()
@@ -376,6 +391,12 @@ struct AgentLoop: Sendable {
                     stream: stream,
                     onTextDelta: { _ in ttftTracker.mark() }
                 )
+            }
+            // Record completion as an event for Datadog LLM Obs
+            let completionText = aggregated.message.textContent
+            if !completionText.isEmpty {
+                observability.recordEvent(name: GenAIEventNames.assistantMessage,
+                    attributes: ["content": completionText], spanContext: modelSpan)
             }
             // Record gen_ai usage attributes on the model span
             if let u = aggregated.usage {

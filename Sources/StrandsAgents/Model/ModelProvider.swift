@@ -16,6 +16,9 @@ public protocol ModelProvider: Sendable {
     /// A human-readable identifier for this model (e.g. "us.anthropic.claude-sonnet-4-20250514-v1:0").
     var modelId: String? { get }
 
+    /// The OTel GenAI system identifier for this provider (e.g. "aws.bedrock", "anthropic", "openai").
+    var genAISystem: String { get }
+
     /// Stream a conversation with the model.
     ///
     /// - Parameters:
@@ -47,6 +50,11 @@ public protocol ConfigurableModelProvider: ModelProvider {
 }
 
 // MARK: - Default Parameters
+
+extension ModelProvider {
+    /// Default GenAI system -- providers override this with their specific value.
+    public var genAISystem: String { "unknown" }
+}
 
 extension ModelProvider {
     /// Convenience overload with defaults for optional parameters.

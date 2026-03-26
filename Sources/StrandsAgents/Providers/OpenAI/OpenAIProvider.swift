@@ -10,6 +10,7 @@ import Foundation
 /// Also works with Azure OpenAI and any OpenAI-compatible API by changing `baseURL`.
 public final class OpenAIProvider: ModelProvider, @unchecked Sendable {
     public var modelId: String? { config.modelId }
+    public var genAISystem: String { "openai" }
 
     private var config: OpenAIConfig
     private let session: URLSession
