@@ -490,10 +490,11 @@ struct AgentLoop: Sendable {
                     }
                 )
             }
-            // gen_ai.completion as span attribute -- Python Strands SDK format
+            // OTel GenAI 1.37+ output messages
             let completionText = aggregated.message.textContent
             if !completionText.isEmpty {
-                observability.setAttribute(modelSpan, key: "gen_ai.completion", value: jsonContent(completionText))
+                observability.setAttribute(modelSpan, key: "gen_ai.output.messages",
+                    value: buildOutputMessages(text: completionText, finishReason: aggregated.stopReason.rawValue))
             }
             // gen_ai.choice event carries usage
             if let u = aggregated.usage {
