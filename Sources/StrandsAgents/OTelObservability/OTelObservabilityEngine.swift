@@ -79,6 +79,8 @@ public final class OTelObservabilityEngine: StrandsAgents.ObservabilityEngine, @
             .with(resource: Resource(attributes: [
                 ResourceAttributes.serviceName.rawValue: AttributeValue.string(service),
                 ResourceAttributes.serviceVersion.rawValue: AttributeValue.string(version),
+                "ml_app": AttributeValue.string(service),
+                "deployment.environment": AttributeValue.string("production"),
             ]))
             .build()
         OpenTelemetry.registerTracerProvider(tracerProvider: provider)
