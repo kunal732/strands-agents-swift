@@ -368,17 +368,17 @@ struct AgentLoop: Sendable {
             spanKind: .client
         )
 
-        // Record the input messages (prompt) as events for Datadog LLM Obs
+        // Record input messages as events -- Python SDK format: content is JSON array [{"text":"..."}]
         if let systemPrompt, !systemPrompt.isEmpty {
             observability.recordEvent(name: "gen_ai.system.message",
-                attributes: ["content": systemPrompt], spanContext: modelSpan)
+                attributes: ["content": jsonContent(systemPrompt)], spanContext: modelSpan)
         }
         for message in normalizedMessages {
             let role = message.role == .user ? "user" : "assistant"
             let content = message.textContent
             if !content.isEmpty {
                 observability.recordEvent(name: "gen_ai.\(role).message",
-                    attributes: ["content": content], spanContext: modelSpan)
+                    attributes: ["content": jsonContent(content)], spanContext: modelSpan)
             }
         }
 
@@ -397,21 +397,20 @@ struct AgentLoop: Sendable {
                     onTextDelta: { _ in ttftTracker.mark() }
                 )
             }
-            // Record completion as an event for Datadog LLM Obs
+            // gen_ai.choice carries completion + usage -- Python SDK format
             let completionText = aggregated.message.textContent
+            var choiceAttrs: [String: String] = [
+                "finish_reason": aggregated.stopReason.rawValue,
+            ]
             if !completionText.isEmpty {
-                observability.recordEvent(name: GenAIEventNames.assistantMessage,
-                    attributes: ["content": completionText], spanContext: modelSpan)
+                choiceAttrs["message"] = jsonContent(completionText)
             }
-            // Record gen_ai usage + response attributes
             if let u = aggregated.usage {
-                observability.recordEvent(name: GenAIEventNames.choice, attributes: [
-                    GenAIAttributes.usageInputTokens: "\(u.inputTokens)",
-                    GenAIAttributes.usageOutputTokens: "\(u.outputTokens)",
-                    GenAIAttributes.usageTotalTokens: "\(u.totalTokens)",
-                    GenAIAttributes.responseFinishReasons: aggregated.stopReason.rawValue,
-                ], spanContext: modelSpan)
+                choiceAttrs[GenAIAttributes.usageInputTokens] = "\(u.inputTokens)"
+                choiceAttrs[GenAIAttributes.usageOutputTokens] = "\(u.outputTokens)"
+                choiceAttrs[GenAIAttributes.usageTotalTokens] = "\(u.totalTokens)"
             }
+            observability.recordEvent(name: GenAIEventNames.choice, attributes: choiceAttrs, spanContext: modelSpan)
             observability.endSpan(modelSpan, status: .ok)
         } catch {
             observability.endSpan(modelSpan, status: .error(error.localizedDescription))
@@ -468,14 +467,14 @@ struct AgentLoop: Sendable {
         // Record the input messages (prompt) as events for Datadog LLM Obs
         if let systemPrompt, !systemPrompt.isEmpty {
             observability.recordEvent(name: "gen_ai.system.message",
-                attributes: ["content": systemPrompt], spanContext: modelSpan)
+                attributes: ["content": jsonContent(systemPrompt)], spanContext: modelSpan)
         }
         for message in normalizedMessages {
             let role = message.role == .user ? "user" : "assistant"
             let content = message.textContent
             if !content.isEmpty {
                 observability.recordEvent(name: "gen_ai.\(role).message",
-                    attributes: ["content": content], spanContext: modelSpan)
+                    attributes: ["content": jsonContent(content)], spanContext: modelSpan)
             }
         }
 
@@ -498,21 +497,20 @@ struct AgentLoop: Sendable {
                     }
                 )
             }
-            // Record completion event
+            // gen_ai.choice carries completion + usage -- Python SDK format
             let completionText = aggregated.message.textContent
+            var choiceAttrs: [String: String] = [
+                "finish_reason": aggregated.stopReason.rawValue,
+            ]
             if !completionText.isEmpty {
-                observability.recordEvent(name: GenAIEventNames.assistantMessage,
-                    attributes: ["content": completionText], spanContext: modelSpan)
+                choiceAttrs["message"] = jsonContent(completionText)
             }
-            // Record gen_ai usage + response attributes
             if let u = aggregated.usage {
-                observability.recordEvent(name: GenAIEventNames.choice, attributes: [
-                    GenAIAttributes.usageInputTokens: "\(u.inputTokens)",
-                    GenAIAttributes.usageOutputTokens: "\(u.outputTokens)",
-                    GenAIAttributes.usageTotalTokens: "\(u.totalTokens)",
-                    GenAIAttributes.responseFinishReasons: aggregated.stopReason.rawValue,
-                ], spanContext: modelSpan)
+                choiceAttrs[GenAIAttributes.usageInputTokens] = "\(u.inputTokens)"
+                choiceAttrs[GenAIAttributes.usageOutputTokens] = "\(u.outputTokens)"
+                choiceAttrs[GenAIAttributes.usageTotalTokens] = "\(u.totalTokens)"
             }
+            observability.recordEvent(name: GenAIEventNames.choice, attributes: choiceAttrs, spanContext: modelSpan)
             observability.endSpan(modelSpan, status: .ok)
         } catch {
             observability.endSpan(modelSpan, status: .error(error.localizedDescription))
@@ -531,6 +529,16 @@ struct AgentLoop: Sendable {
     }
 
     // MARK: - Helpers
+
+    /// Serialize text as [{"text":"..."}] -- Python Strands SDK format for OTel message content.
+    private func jsonContent(_ text: String) -> String {
+        let obj: [[String: String]] = [["text": text]]
+        guard let data = try? JSONSerialization.data(withJSONObject: obj),
+              let str = String(data: data, encoding: .utf8) else {
+            return "[{\"text\":\"\(text)\"}]"
+        }
+        return str
+    }
 
     private func resolveProvider(
         messages: [Message],
