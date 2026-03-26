@@ -57,6 +57,7 @@ struct AgentLoop: Sendable {
             attributes: [
                 GenAIAttributes.operationName: "invoke_agent",
                 GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
+                "gen_ai.input.messages": buildInputMessages(systemPrompt: systemPrompt, messages: messages),
             ]
         )
         defer { observability.endSpan(invocationSpan, status: .ok) }
@@ -101,6 +102,13 @@ struct AgentLoop: Sendable {
             if aggregated.stopReason != StopReason.toolUse {
                 messages.append(aggregated.message)
                 observability.endSpan(cycleSpan, status: .ok)
+
+                // Set output on root span for trace list view
+                let finalText = aggregated.message.textContent
+                if !finalText.isEmpty {
+                    observability.setAttribute(invocationSpan, key: "gen_ai.output.messages",
+                        value: buildOutputMessages(text: finalText, finishReason: aggregated.stopReason.rawValue))
+                }
 
                 let cycleMetric = CycleMetrics(
                     cycleNumber: cycleCount,
@@ -210,6 +218,7 @@ struct AgentLoop: Sendable {
             attributes: [
                 GenAIAttributes.operationName: "invoke_agent",
                 GenAIAttributes.eventStartTime: ISO8601DateFormatter().string(from: Date()),
+                "gen_ai.input.messages": buildInputMessages(systemPrompt: systemPrompt, messages: messages),
             ]
         )
         defer { observability.endSpan(invocationSpan, status: .ok) }
@@ -249,6 +258,13 @@ struct AgentLoop: Sendable {
             if aggregated.stopReason != StopReason.toolUse {
                 messages.append(aggregated.message)
                 observability.endSpan(cycleSpan, status: .ok)
+
+                // Set output on root span for trace list view
+                let finalText = aggregated.message.textContent
+                if !finalText.isEmpty {
+                    observability.setAttribute(invocationSpan, key: "gen_ai.output.messages",
+                        value: buildOutputMessages(text: finalText, finishReason: aggregated.stopReason.rawValue))
+                }
 
                 allCycleMetrics.append(CycleMetrics(
                     cycleNumber: cycleCount, usage: aggregated.usage ?? Usage(),
