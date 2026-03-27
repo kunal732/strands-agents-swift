@@ -282,11 +282,15 @@ public enum ToolSchemaInference {
 
     /// Parse the model's response into tool schemas.
     public static func parseInferenceResponse(_ response: String) -> [(name: String, params: [String])]? {
-        // Find JSON array in the response
-        guard let start = response.firstIndex(of: "["),
-              let end = response.lastIndex(of: "]") else { return nil }
+        // Strip <think>...</think> blocks (Qwen3 and other reasoning models output these)
+        var text = response
+        while let s = text.range(of: "<think>"), let e = text.range(of: "</think>") {
+            text.removeSubrange(s.lowerBound...e.upperBound)
+        }
+        guard let start = text.firstIndex(of: "["),
+              let end = text.lastIndex(of: "]") else { return nil }
 
-        let jsonString = String(response[start...end])
+        let jsonString = String(text[start...end])
         guard let data = jsonString.data(using: .utf8),
               let array = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return nil }
 
