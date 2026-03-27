@@ -32,6 +32,17 @@ public final class MLXProvider: ModelProvider, @unchecked Sendable {
         self.init(config: MLXConfig(modelId: modelId))
     }
 
+    /// Convenience initializer with a model ID and download progress callback.
+    ///
+    /// ```swift
+    /// MLXProvider(modelId: "mlx-community/Qwen3-8B-4bit") { progress in
+    ///     print("Downloading: \(Int(progress * 100))%")
+    /// }
+    /// ```
+    public convenience init(modelId: String, onDownloadProgress: @escaping @Sendable (Double) -> Void) {
+        self.init(config: MLXConfig(modelId: modelId, onDownloadProgress: onDownloadProgress))
+    }
+
     // MARK: - ModelProvider
 
     public func stream(
@@ -46,7 +57,7 @@ public final class MLXProvider: ModelProvider, @unchecked Sendable {
         return AsyncThrowingStream { continuation in
             Task {
                 do {
-                    let container = try await loader.load(modelId: config.modelId)
+                    let container = try await loader.load(modelId: config.modelId, onProgress: config.onDownloadProgress)
 
                     // Build chat messages
                     let chatMessages = MLXStreamAdapter.buildChatMessages(
@@ -160,7 +171,7 @@ public final class MLXProvider: ModelProvider, @unchecked Sendable {
 
     /// Preload the model into memory.
     public func preload() async throws {
-        _ = try await loader.load(modelId: config.modelId)
+        _ = try await loader.load(modelId: config.modelId, onProgress: config.onDownloadProgress)
     }
 
     /// Evict the model from cache to free memory.

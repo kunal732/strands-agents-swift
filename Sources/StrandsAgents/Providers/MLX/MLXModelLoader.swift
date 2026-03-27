@@ -9,12 +9,18 @@ actor MLXModelLoader {
     private var cache: [String: ModelContainer] = [:]
 
     /// Load a model by HuggingFace model ID, using cache if available.
-    func load(modelId: String) async throws -> ModelContainer {
+    /// - Parameter onProgress: optional closure called with 0.0→1.0 during download.
+    func load(
+        modelId: String,
+        onProgress: (@Sendable (Double) -> Void)? = nil
+    ) async throws -> ModelContainer {
         if let cached = cache[modelId] {
             return cached
         }
 
-        let container = try await loadModelContainer(id: modelId)
+        let container = try await loadModelContainer(id: modelId) { progress in
+            onProgress?(progress.fractionCompleted)
+        }
         cache[modelId] = container
         return container
     }
