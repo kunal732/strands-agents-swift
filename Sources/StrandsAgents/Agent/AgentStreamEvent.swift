@@ -1,7 +1,12 @@
 /// Events yielded by `Agent.stream()` during execution.
 public enum AgentStreamEvent: Sendable {
-    /// A text delta from the model (for live display).
+    /// A text token from the model's visible response (outside any <think> block).
     case textDelta(String)
+
+    /// A text token from inside a <think>...</think> reasoning block.
+    /// Only emitted by models that support extended thinking (e.g. Qwen3).
+    /// Use this to show the model's reasoning in a separate UI element.
+    case thinkingDelta(String)
 
     /// A complete content block from the model.
     case contentBlock(ContentBlock)

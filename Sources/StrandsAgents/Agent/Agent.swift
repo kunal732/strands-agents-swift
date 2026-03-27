@@ -177,6 +177,7 @@ public final class Agent: @unchecked Sendable {
         ) { event in
             switch event {
             case .textDelta(let text): await handler.onTextDelta(text)
+            case .thinkingDelta: break  // thinking tokens not forwarded to callback handler
             case .contentBlock(let block): await handler.onContentBlock(block)
             case .toolResult(let r): await handler.onToolResult(r)
             case .modelMessage(let msg): await handler.onModelMessage(msg)
@@ -278,6 +279,7 @@ public final class Agent: @unchecked Sendable {
                         // Also dispatch to callback handler
                         switch event {
                         case .textDelta(let text): await handler.onTextDelta(text)
+                        case .thinkingDelta: break
                         case .contentBlock(let block): await handler.onContentBlock(block)
                         case .toolResult(let r): await handler.onToolResult(r)
                         case .modelMessage(let msg): await handler.onModelMessage(msg)

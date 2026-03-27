@@ -480,16 +480,18 @@ struct AgentLoop: Sendable {
                 messages: normalizedMessages, toolSpecs: toolSpecs,
                 systemPrompt: systemPrompt, toolChoice: toolChoice
             )
+            let thinkParser = ThinkingTagParser()
             aggregated = try await retryStrategy.execute {
                 try await StreamAggregator().aggregate(
                     stream: stream,
                     onContentBlock: { block in await yield(.contentBlock(block)) },
                     onTextDelta: { text in
                         ttftTracker.mark()
-                        await yield(.textDelta(text))
+                        for event in thinkParser.process(text) { await yield(event) }
                     }
                 )
             }
+            for event in thinkParser.flush() { await yield(event) }
             // OTel GenAI 1.37+ output messages
             let completionText = aggregated.message.textContent
             if !completionText.isEmpty {
