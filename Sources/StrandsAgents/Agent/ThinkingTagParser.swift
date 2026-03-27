@@ -37,7 +37,7 @@ final class ThinkingTagParser: @unchecked Sendable {
                 if !before.isEmpty {
                     events.append(insideThink ? .thinkingDelta(before) : .textDelta(before))
                 }
-                buffer.removeSubrange(buffer.startIndex...range.upperBound)
+                buffer.removeSubrange(buffer.startIndex..<range.upperBound)
                 insideThink.toggle()
             } else {
                 // Check if the buffer tail could be a partial tag prefix
