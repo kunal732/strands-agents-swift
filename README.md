@@ -79,6 +79,35 @@ let agent = Agent(model: MLXProvider(modelId: "mlx-community/Qwen3-8B-4bit"))
 let result = try await agent.run("What is 42 * 17?")
 ```
 
+#### Download Progress
+
+Pass an `onDownloadProgress` callback to track the model download. The closure receives a `Double` from `0.0` to `1.0`. It is not called if the model is already cached.
+
+```swift
+let provider = MLXProvider(modelId: "mlx-community/Qwen3-8B-4bit") { progress in
+    print("Downloading: \(Int(progress * 100))%")
+}
+```
+
+In SwiftUI, bind it to a `@State` variable to drive a `ProgressView`:
+
+```swift
+@State private var downloadProgress: Double = 0
+
+var body: some View {
+    if downloadProgress < 1.0 {
+        ProgressView("Downloading model...", value: downloadProgress)
+    }
+}
+
+// When creating the provider:
+let provider = MLXProvider(modelId: "mlx-community/Qwen3-8B-4bit") { progress in
+    Task { @MainActor in
+        downloadProgress = progress
+    }
+}
+```
+
 ### Hybrid Routing
 
 Route between local and cloud models:
