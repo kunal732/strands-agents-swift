@@ -74,63 +74,6 @@ let package = Package(
             exclude: ["Info.plist"]
         ),
 
-        // Samples
-        .executableTarget(
-            name: "Sample01-SimpleLocalAgent",
-            dependencies: ["StrandsAgents"],
-            path: "Samples/01-SimpleLocalAgent"
-        ),
-        .executableTarget(
-            name: "Sample02-SimpleBedrockAgent",
-            dependencies: ["StrandsAgents"],
-            path: "Samples/02-SimpleBedrockAgent"
-        ),
-        .executableTarget(
-            name: "Sample03-HybridAgent",
-            dependencies: ["StrandsAgents"],
-            path: "Samples/03-HybridAgent"
-        ),
-        .executableTarget(
-            name: "Sample04-NovaSonicBidi",
-            dependencies: ["StrandsAgents"],
-            path: "Samples/04-NovaSonicBidi"
-        ),
-        .executableTarget(
-            name: "Sample05-MLXBidiLocal",
-            dependencies: ["StrandsAgents"],
-            path: "Samples/05-MLXBidiLocal"
-        ),
-        .executableTarget(
-            name: "Sample06-MultiAgentGraph",
-            dependencies: ["StrandsAgents"],
-            path: "Samples/06-MultiAgentGraph"
-        ),
-        .executableTarget(
-            name: "Sample07-MultiAgentSwarm",
-            dependencies: ["StrandsAgents"],
-            path: "Samples/07-MultiAgentSwarm"
-        ),
-        .executableTarget(
-            name: "Sample09-StructuredOutput",
-            dependencies: ["StrandsAgents"],
-            path: "Samples/09-StructuredOutput"
-        ),
-        .executableTarget(
-            name: "Sample10-SessionPersistence",
-            dependencies: ["StrandsAgents"],
-            path: "Samples/10-SessionPersistence"
-        ),
-        .executableTarget(
-            name: "Sample11-DatadogObservability",
-            dependencies: ["StrandsAgents"],
-            path: "Samples/11-DatadogObservability"
-        ),
-        .executableTarget(
-            name: "Sample12-MCPDesktopControl",
-            dependencies: ["StrandsAgents"],
-            path: "Samples/12-MCPDesktopControl"
-        ),
-
         // Tests
         .testTarget(
             name: "StrandsAgentsTests",

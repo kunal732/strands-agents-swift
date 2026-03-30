@@ -276,6 +276,11 @@ public final class Agent: @unchecked Sendable {
                         toolChoice: nil
                     ) { event in
                         continuation.yield(event)
+                        // Yield to the scheduler so the consumer can process this event
+                        // before the producer generates the next one. Without this,
+                        // AsyncThrowingStream.Continuation.yield() never suspends the
+                        // producer task and all tokens are buffered before any are printed.
+                        await Task.yield()
                         // Also dispatch to callback handler
                         switch event {
                         case .textDelta(let text): await handler.onTextDelta(text)
