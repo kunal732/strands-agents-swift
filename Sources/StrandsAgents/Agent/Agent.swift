@@ -312,6 +312,37 @@ public final class Agent: @unchecked Sendable {
         stream(.text(text))
     }
 
+    /// Stream just the text tokens (thinking + response) as plain strings.
+    ///
+    /// ```swift
+    /// for try await text in agent.streamText("What is 42 * 17?") {
+    ///     print(text, terminator: "")
+    /// }
+    /// ```
+    public func streamText(_ input: AgentInput) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
+            Task {
+                do {
+                    for try await event in self.stream(input) {
+                        switch event {
+                        case .textDelta(let text), .thinkingDelta(let text):
+                            continuation.yield(text)
+                        default: break
+                        }
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+        }
+    }
+
+    /// Stream just the text tokens with a string input.
+    public func streamText(_ text: String) -> AsyncThrowingStream<String, Error> {
+        streamText(.text(text))
+    }
+
     // MARK: - Direct Tool Calling
 
     /// Call a registered tool directly without going through the model.
