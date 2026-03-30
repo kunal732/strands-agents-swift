@@ -314,6 +314,9 @@ public final class Agent: @unchecked Sendable {
 
     /// Stream just the text tokens (thinking + response) as plain strings.
     ///
+    /// This is the simplest way to stream model output. It yields every
+    /// visible token (both thinking and response) as a plain `String`.
+    ///
     /// ```swift
     /// for try await text in agent.streamText("What is 42 * 17?") {
     ///     print(text, terminator: "")
@@ -323,15 +326,49 @@ public final class Agent: @unchecked Sendable {
         AsyncThrowingStream { continuation in
             Task {
                 do {
-                    for try await event in self.stream(input) {
+                    try self.acquireLock()
+
+                    try await self.resolveToolSchemas()
+                    self.appendUserInput(input)
+
+                    try await self.hookRegistry.invoke(BeforeInvocationEvent(messages: self.messages))
+
+                    let loop = self.makeLoop()
+                    let handler = self.callbackHandler
+
+                    let result = try await loop.runStreaming(
+                        messages: &self.messages,
+                        systemPrompt: self.systemPrompt,
+                        toolChoice: nil
+                    ) { event in
                         switch event {
-                        case .textDelta(let text), .thinkingDelta(let text):
+                        case .textDelta(let text):
                             continuation.yield(text)
-                        default: break
+                            await Task.yield()
+                            await handler.onTextDelta(text)
+                        case .thinkingDelta(let text):
+                            continuation.yield(text)
+                            await Task.yield()
+                        case .contentBlock(let block):
+                            await handler.onContentBlock(block)
+                        case .toolResult(let r):
+                            await handler.onToolResult(r)
+                        case .modelMessage(let msg):
+                            await handler.onModelMessage(msg)
+                        case .result(let r):
+                            await handler.onResult(r)
                         }
                     }
+
+                    try await self.hookRegistry.invokeReversed(AfterInvocationEvent(result: result))
+                    if let sm = self.sessionManager {
+                        try? await sm.save(messages: self.messages)
+                    }
+
                     continuation.finish()
+                    self.releaseLock()
                 } catch {
+                    self.releaseLock()
                     continuation.finish(throwing: error)
                 }
             }
