@@ -109,6 +109,7 @@ public final class MLXProvider: ModelProvider, @unchecked Sendable {
                                 }
                                 if textStarted {
                                     continuation.yield(.contentBlockDelta(.text(text)))
+                                    await Task.yield()
                                 }
                             }
 
