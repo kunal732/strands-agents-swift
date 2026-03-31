@@ -39,41 +39,6 @@ let package = Package(
             path: "Sources/StrandsAgents"
         ),
 
-        // Examples
-        .executableTarget(
-            name: "LocalInferenceExample",
-            dependencies: ["StrandsAgents"],
-            path: "Examples/LocalInference"
-        ),
-        .executableTarget(
-            name: "BedrockInferenceExample",
-            dependencies: ["StrandsAgents"],
-            path: "Examples/BedrockInference"
-        ),
-        .executableTarget(
-            name: "MenuBarAgent",
-            dependencies: ["StrandsAgents"],
-            path: "Examples/MenuBarAgent"
-        ),
-        .executableTarget(
-            name: "WritingAssistant",
-            dependencies: ["StrandsAgents"],
-            path: "Examples/WritingAssistant",
-            exclude: ["Info.plist"]
-        ),
-        .executableTarget(
-            name: "PersonalAssistant",
-            dependencies: ["StrandsAgents"],
-            path: "Examples/PersonalAssistant",
-            exclude: ["Info.plist"]
-        ),
-        .executableTarget(
-            name: "DesktopAssistant",
-            dependencies: ["StrandsAgents"],
-            path: "Examples/DesktopAssistant",
-            exclude: ["Info.plist"]
-        ),
-
         // Tests
         .testTarget(
             name: "StrandsAgentsTests",
