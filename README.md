@@ -53,13 +53,22 @@ print(result)
 
 ### Streaming
 
-`agent.stream()` returns tokens as they generate, so you can display the response in real time:
+`agent.streamText()` yields tokens as plain strings, so you can display the response in real time:
+
+```swift
+for try await text in agent.streamText("How many words are in the Declaration of Independence?") {
+    print(text, terminator: "")
+}
+```
+
+For more control over individual event types (tool results, metrics, separating thinking from response), use `agent.stream()`:
 
 ```swift
 for try await event in agent.stream("How many words are in the Declaration of Independence?") {
     switch event {
     case .textDelta(let text):
-        // Prints each token as it arrives (like a typing effect)
+        print(text, terminator: "")
+    case .thinkingDelta(let text):
         print(text, terminator: "")
     case .toolResult(let result):
         print("\n[Tool returned: \(result.status)]")
